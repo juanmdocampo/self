@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self — Tu bienestar, en buenas manos</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F0E8;
+    --sage: #8BAF8E;
+    --sage-dark: #5C7A5F;
+    --blush: #E8A598;
+    --warm-dark: #2C2416;
+    --warm-mid: #6B5B47;
+    --card-bg: #FFFDF9;
+    --shadow: rgba(44,36,22,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--warm-dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background: var(--cream);
+    border-bottom: 1px solid rgba(44,36,22,0.08);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--warm-dark);
+  }
+  .logo span { color: var(--sage-dark); font-style: italic; }
+  .nav-tabs { display: flex; gap: 6px; }
+  .nav-tab {
+    padding: 8px 20px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--warm-mid);
+  }
+  .nav-tab.active {
+    background: var(--warm-dark);
+    color: var(--cream);
+  }
+  .nav-tab:hover:not(.active) { background: rgba(44,36,22,0.06); }
+  .nav-right { display: flex; gap: 12px; align-items: center; }
+  .btn-login {
+    padding: 8px 22px;
+    border-radius: 100px;
+    border: 1.5px solid var(--warm-dark);
+    background: transparent;
+    color: var(--warm-dark);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-login:hover { background: var(--warm-dark); color: var(--cream); }
+  .btn-signup {
+    padding: 8px 22px;
+    border-radius: 100px;
+    border: none;
+    background: var(--sage-dark);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-signup:hover { background: var(--sage); }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ══════════════════════════
+     LANDING
+  ══════════════════════════ */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 65px);
+    gap: 0;
+  }
+  .hero-left {
+    padding: 80px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 28px;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139,175,142,0.15);
+    border: 1px solid rgba(139,175,142,0.4);
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    color: var(--sage-dark);
+    font-weight: 500;
+    width: fit-content;
+  }
+  .hero-tag::before { content: '✦'; }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 4vw, 4rem);
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--sage-dark);
+  }
+  .hero-desc {
+    font-size: 1.05rem;
+    color: var(--warm-mid);
+    line-height: 1.7;
+    max-width: 440px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  .cta-primary {
+    padding: 14px 32px;
+    border-radius: 100px;
+    border: none;
+    background: var(--warm-dark);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .cta-primary:hover { background: var(--sage-dark); transform: translateY(-1px); }
+  .cta-secondary {
+    padding: 14px 32px;
+    border-radius: 100px;
+    border: 1.5px solid var(--warm-mid);
+    background: transparent;
+    color: var(--warm-mid);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .cta-secondary:hover { border-color: var(--warm-dark); color: var(--warm-dark); }
+  .hero-stats { display: flex; gap: 32px; padding-top: 8px; }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--warm-dark);
+  }
+  .stat-label { font-size: 0.75rem; color: var(--warm-mid); margin-top: 2px; }
+
+  .hero-right {
+    background: linear-gradient(135deg, #D4E8D5 0%, #E8D4C8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-right::before {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    top: -100px; right: -100px;
+  }
+
+  /* ══════════════════════════
+     SWIPE / DISCOVER
+  ══════════════════════════ */
+  .discover-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 0;
+    min-height: calc(100vh - 65px);
+  }
+  .discover-sidebar {
+    padding: 32px 24px;
+    border-right: 1px solid rgba(44,36,22,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 8px; }
+  .filter-label { font-size: 0.75rem; color: var(--warm-mid); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1.5px solid rgba(44,36,22,0.15);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    color: var(--warm-mid);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .chip.selected, .chip:hover { background: var(--warm-dark); color: var(--cream); border-color: var(--warm-dark); }
+  .range-slider { width: 100%; accent-color: var(--sage-dark); }
+  .range-val { font-size: 0.82rem; color: var(--warm-mid); }
+
+  .discover-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 28px;
+    position: relative;
+  }
+
+  /* Card stack */
+  .card-stack {
+    position: relative;
+    width: 360px;
+    height: 520px;
+  }
+  .psy-card {
+    position: absolute;
+    width: 360px;
+    height: 520px;
+    border-radius: 24px;
+    background: var(--card-bg);
+    box-shadow: 0 20px 60px var(--shadow);
+    overflow: hidden;
+    cursor: grab;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    user-select: none;
+  }
+  .psy-card:nth-child(2) { transform: rotate(-2deg) translateY(8px); z-index: 1; }
+  .psy-card:nth-child(3) { transform: rotate(2deg) translateY(16px); z-index: 0; }
+  .psy-card:first-child { z-index: 2; }
+  .psy-card:first-child:hover { box-shadow: 0 30px 80px rgba(44,36,22,0.18); }
+
+  .card-img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #C8D8C9 0%, #D8C8BE 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    position: relative;
+  }
+  .card-badge {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: white;
+    border-radius: 100px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--sage-dark);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .card-badge::before { content: '●'; color: var(--sage); font-size: 0.5rem; }
+  .card-body { padding: 20px 22px; }
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .card-spec {
+    font-size: 0.82rem;
+    color: var(--sage-dark);
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .card-tag {
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: rgba(139,175,142,0.12);
+    font-size: 0.72rem;
+    color: var(--sage-dark);
+    font-weight: 500;
+  }
+  .card-meta { display: flex; gap: 16px; }
+  .meta-item { font-size: 0.78rem; color: var(--warm-mid); display: flex; align-items: center; gap: 4px; }
+  .meta-icon { font-size: 0.85rem; }
+
+  /* Action buttons */
+  .card-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .action-btn {
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+  .action-btn.skip { background: white; }
+  .action-btn.skip:hover { background: #fee; transform: scale(1.08); }
+  .action-btn.like { background: var(--sage-dark); width: 68px; height: 68px; font-size: 1.6rem; }
+  .action-btn.like:hover { background: var(--sage); transform: scale(1.08); }
+  .action-btn.info { background: white; }
+  .action-btn.info:hover { background: #f0f8ff; transform: scale(1.08); }
+
+  /* Like/Nope overlays */
+  .card-overlay {
+    position: absolute;
+    top: 30px;
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 3px solid;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .overlay-like { left: 20px; color: var(--sage-dark); border-color: var(--sage-dark); transform: rotate(-15deg); }
+  .overlay-nope { right: 20px; color: #c0392b; border-color: #c0392b; transform: rotate(15deg); }
+
+  /* Right panel - matches */
+  .matches-panel {
+    padding: 32px 24px;
+    border-left: 1px solid rgba(44,36,22,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  .matches-header {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .match-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .match-item:hover { background: rgba(44,36,22,0.04); }
+  .match-avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C8D8C9, #D8C8BE);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    border: 2px solid var(--sage);
+  }
+  .match-info .match-name { font-size: 0.88rem; font-weight: 500; }
+  .match-info .match-spec { font-size: 0.75rem; color: var(--warm-mid); }
+  .match-time { font-size: 0.7rem; color: var(--warm-mid); margin-left: auto; }
+
+  /* ══════════════════════════
+     PROFILE / REGISTER
+  ══════════════════════════ */
+  .register-page {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .register-page h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+  }
+  .register-page p { color: var(--warm-mid); margin-bottom: 36px; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.8rem; font-weight: 500; color: var(--warm-mid); text-transform: uppercase; letter-spacing: 0.06em; }
+  input, select, textarea {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(44,36,22,0.15);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--warm-dark);
+    transition: border 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--sage-dark); }
+  textarea { resize: vertical; min-height: 100px; }
+
+  .type-selector { display: flex; gap: 12px; }
+  .type-btn {
+    flex: 1;
+    padding: 16px;
+    border-radius: 14px;
+    border: 2px solid rgba(44,36,22,0.15);
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .type-btn .type-icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+  .type-btn .type-label { font-size: 0.82rem; font-weight: 500; color: var(--warm-mid); }
+  .type-btn.selected, .type-btn:hover { border-color: var(--sage-dark); background: rgba(139,175,142,0.08); }
+  .type-btn.selected .type-label { color: var(--sage-dark); }
+
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    background: var(--warm-dark);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.25s;
+  }
+  .submit-btn:hover { background: var(--sage-dark); transform: translateY(-1px); }
+
+  /* ══════════════════════════
+     BACKEND DOCS TAB
+  ══════════════════════════ */
+  .docs-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .docs-page h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+  .docs-page > p { color: var(--warm-mid); }
+  .docs-section {
+    background: white;
+    border-radius: 18px;
+    padding: 28px 32px;
+    border: 1px solid rgba(44,36,22,0.08);
+  }
+  .docs-section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .docs-section h3 span { font-family: monospace; background: rgba(139,175,142,0.15); padding: 2px 8px; border-radius: 6px; font-size: 0.85rem; color: var(--sage-dark); }
+  pre {
+    background: #1E1E2E;
+    color: #CDD6F4;
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+  .kw { color: #CBA6F7; }
+  .str { color: #A6E3A1; }
+  .cm { color: #6C7086; }
+  .fn { color: #89B4FA; }
+  .cl { color: #FAB387; }
+
+  .model-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .model-card {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(44,36,22,0.1);
+    background: var(--cream);
+  }
+  .model-card .model-name { font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+  .model-card .model-fields { font-size: 0.75rem; color: var(--warm-mid); line-height: 1.8; }
+  .field-type { font-family: monospace; color: var(--sage-dark); }
+
+  .endpoint-list { display: flex; flex-direction: column; gap: 8px; }
+  .endpoint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--cream);
+    font-size: 0.82rem;
+  }
+  .method {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .method.get { background: rgba(139,175,142,0.2); color: var(--sage-dark); }
+  .method.post { background: rgba(232,165,152,0.2); color: #b5654a; }
+  .method.put { background: rgba(250,184,57,0.15); color: #9a6f00; }
+  .method.del { background: rgba(200,50,50,0.1); color: #c0392b; }
+  .endpoint-path { font-family: monospace; font-weight: 500; flex: 1; }
+  .endpoint-desc { color: var(--warm-mid); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--warm-dark);
+    color: var(--cream);
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-size: 0.88rem;
+    z-index: 999;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .view.active > * { animation: fadeUp 0.4s ease forwards; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .discover-layout { grid-template-columns: 1fr; }
+    .discover-sidebar, .matches-panel { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Self<span>.</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('landing')">Inicio</button>
+    <button class="nav-tab" onclick="showView('discover')">Descubrir</button>
+    <button class="nav-tab" onclick="showView('register')">Registrarse</button>
+    <button class="nav-tab" onclick="showView('backend')">Arquitectura</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn-login">Iniciar sesión</button>
+    <button class="btn-signup" onclick="showView('register')">Únete</button>
+  </div>
+</nav>
+
+<!-- ══ LANDING ══ -->
+<div id="view-landing" class="view active">
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-tag">Psicología · Bienestar · Conexión</div>
+      <h1>Encontrá tu<br><em>psicólogo ideal.</em></h1>
+      <p class="hero-desc">Self conecta personas con profesionales de salud mental de forma simple, humana e intuitiva. Como elegir un café favorito — pero para tu mente.</p>
+      <div class="hero-ctas">
+        <button class="cta-primary" onclick="showView('discover')">Explorar psicólogos →</button>
+        <button class="cta-secondary" onclick="showView('register')">Soy psicólogo/a</button>
+      </div>
+      <div class="hero-stats">
+        <div>
+          <div class="stat-num">240+</div>
+          <div class="stat-label">Profesionales activos</div>
+        </div>
+        <div>
+          <div class="stat-num">1.2k</div>
+          <div class="stat-label">Conexiones realizadas</div>
+        </div>
+        <div>
+          <div class="stat-num">98%</div>
+          <div class="stat-label">Satisfacción</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <!-- Mini card preview -->
+      <div style="position:relative; width:300px; height:400px;">
+        <div style="position:absolute; top:0; left:20px; width:260px; height:360px; background:white; border-radius:20px; box-shadow:0 20px 50px rgba(44,36,22,0.15); transform:rotate(-3deg);"></div>
+        <div style="position:absolute; top:20px; left:0; width:280px; height:370px; background:var(--card-bg); border-radius:20px; box-shadow:0 20px 50px rgba(44,36,22,0.2); padding:0; overflow:hidden;">
+          <div style="height:200px; background:linear-gradient(135deg,#C8D8C9,#D8C8BE); display:flex; align-items:center; justify-content:center; font-size:4.5rem;">👩‍⚕️</div>
+          <div style="padding:20px;">
+            <div style="font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; margin-bottom:4px;">Dra. Sofía M.</div>
+            <div style="font-size:0.8rem; color:var(--sage-dark); margin-bottom:10px;">Psicología Clínica · TCC</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <span style="background:rgba(139,175,142,0.12);padding:3px 9px;border-radius:100px;font-size:0.7rem;color:var(--sage-dark);">Ansiedad</span>
+              <span style="background:rgba(139,175,142,0.12);padding:3px 9px;border-radius:100px;font-size:0.7rem;color:var(--sage-dark);">Adultos</span>
+              <span style="background:rgba(139,175,142,0.12);padding:3px 9px;border-radius:100px;font-size:0.7rem;color:var(--sage-dark);">Online</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DISCOVER ══ -->
+<div id="view-discover" class="view">
+  <div class="discover-layout">
+
+    <!-- Filters -->
+    <div class="discover-sidebar">
+      <div>
+        <div class="sidebar-title">Filtros</div>
+        <div style="font-size:0.8rem;color:var(--warm-mid);">Encontrá tu match ideal</div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Especialidad</div>
+        <div class="filter-chips">
+          <button class="chip selected">Todas</button>
+          <button class="chip">Ansiedad</button>
+          <button class="chip">Depresión</button>
+          <button class="chip">Pareja</button>
+          <button class="chip">Familia</button>
+          <button class="chip">Infancia</button>
+          <button class="chip">Trauma</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Modalidad</div>
+        <div class="filter-chips">
+          <button class="chip selected">Todas</button>
+          <button class="chip">Online</button>
+          <button class="chip">Presencial</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Corriente</div>
+        <div class="filter-chips">
+          <button class="chip">TCC</button>
+          <button class="chip">Gestalt</button>
+          <button class="chip">Psicoanalítica</button>
+          <button class="chip">Sistémica</button>
+          <button class="chip">ACT</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Precio (por sesión)</div>
+        <input type="range" class="range-slider" min="2000" max="20000" value="10000" oninput="this.nextElementSibling.textContent='Hasta $'+Number(this.value).toLocaleString()">
+        <div class="range-val">Hasta $10.000</div>
+      </div>
+    </div>
+
+    <!-- Card stack -->
+    <div class="discover-main">
+      <div style="text-align:center; margin-bottom:-8px;">
+        <div style="font-size:0.8rem;color:var(--warm-mid);">🧭 <span id="card-counter">3 psicólogos cerca de vos</span></div>
+      </div>
+
+      <div class="card-stack" id="cardStack">
+        <!-- Card 3 (back) -->
+        <div class="psy-card">
+          <div class="card-img">🧑‍⚕️
+            <div class="card-badge">Disponible</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">Lic. Martín R.</div>
+            <div class="card-spec">Psicoanálisis · Adultos</div>
+            <div class="card-tags">
+              <span class="card-tag">Depresión</span>
+              <span class="card-tag">Identidad</span>
+              <span class="card-tag">Presencial</span>
+            </div>
+            <div class="card-meta">
+              <span class="meta-item"><span class="meta-icon">📍</span>Palermo, CABA</span>
+              <span class="meta-item"><span class="meta-icon">⭐</span>4.8</span>
+              <span class="meta-item"><span class="meta-icon">💬</span>12 años</span>
+            </div>
+          </div>
+          <div class="card-overlay overlay-like">MATCH</div>
+          <div class="card-overlay overlay-nope">NOPE</div>
+        </div>
+        <!-- Card 2 -->
+        <div class="psy-card">
+          <div class="card-img">👩‍💼
+            <div class="card-badge">Disponible</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">Dra. Laura G.</div>
+            <div class="card-spec">TCC · Sistémica</div>
+            <div class="card-tags">
+              <span class="card-tag">Parejas</span>
+              <span class="card-tag">Familia</span>
+              <span class="card-tag">Online</span>
+            </div>
+            <div class="card-meta">
+              <span class="meta-item"><span class="meta-icon">📍</span>Online</span>
+              <span class="meta-item"><span class="meta-icon">⭐</span>4.9</span>
+              <span class="meta-item"><span class="meta-icon">💬</span>8 años</span>
+            </div>
+          </div>
+          <div class="card-overlay overlay-like">MATCH</div>
+          <div class="card-overlay overlay-nope">NOPE</div>
+        </div>
+        <!-- Card 1 (top) -->
+        <div class="psy-card" id="topCard">
+          <div class="card-img">👩‍⚕️
+            <div class="card-badge">Disponible hoy</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">Dra. Sofía M.</div>
+            <div class="card-spec">Psicología Clínica · TCC</div>
+            <div class="card-tags">
+              <span class="card-tag">Ansiedad</span>
+              <span class="card-tag">Adultos</span>
+              <span class="card-tag">Online</span>
+              <span class="card-tag">Duelo</span>
+            </div>
+            <div class="card-meta">
+              <span class="meta-item"><span class="meta-icon">📍</span>Recoleta, CABA</span>
+              <span class="meta-item"><span class="meta-icon">⭐</span>4.9</span>
+              <span class="meta-item"><span class="meta-icon">💬</span>10 años exp.</span>
+            </div>
+          </div>
+          <div class="card-overlay overlay-like" id="overlayLike">MATCH</div>
+          <div class="card-overlay overlay-nope" id="overlayNope">NOPE</div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="action-btn skip" onclick="swipeCard('left')" title="Pasar">✕</button>
+        <button class="action-btn like" onclick="swipeCard('right')" title="Me interesa">♥</button>
+        <button class="action-btn info" onclick="showToast('💬 Función de chat próximamente!')" title="Info">ℹ</button>
+      </div>
+      <div style="font-size:0.75rem;color:var(--warm-mid);">← Pasar &nbsp;|&nbsp; ♥ Me interesa →</div>
+    </div>
+
+    <!-- Matches -->
+    <div class="matches-panel">
+      <div class="matches-header">Tus matches ✨</div>
+      <div style="font-size:0.78rem;color:var(--warm-mid);margin-top:-8px;">Psicólogos que también te eligieron</div>
+
+      <div class="match-item">
+        <div class="match-avatar">👩‍⚕️</div>
+        <div class="match-info">
+          <div class="match-name">Dra. Camila S.</div>
+          <div class="match-spec">TCC · Ansiedad</div>
+        </div>
+        <div class="match-time">hoy</div>
+      </div>
+      <div class="match-item">
+        <div class="match-avatar">🧑‍⚕️</div>
+        <div class="match-info">
+          <div class="match-name">Lic. Andrés P.</div>
+          <div class="match-spec">Gestalt · Adultos</div>
+        </div>
+        <div class="match-time">ayer</div>
+      </div>
+      <div class="match-item">
+        <div class="match-avatar">👩‍💼</div>
+        <div class="match-info">
+          <div class="match-name">Dra. Valentina R.</div>
+          <div class="match-spec">Psicoanalítica</div>
+        </div>
+        <div class="match-time">lun</div>
+      </div>
+
+      <div style="margin-top:auto;padding:16px;background:rgba(139,175,142,0.08);border-radius:14px;border:1px dashed rgba(139,175,142,0.4);">
+        <div style="font-size:0.8rem;font-weight:500;color:var(--sage-dark);margin-bottom:4px;">🌱 Próximamente</div>
+        <div style="font-size:0.75rem;color:var(--warm-mid);">Chat directo con tus matches, agendado de turnos y más.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="view-register" class="view">
+  <div class="register-page">
+    <h2>Crear cuenta</h2>
+    <p>Sos paciente buscando ayuda, o profesional ofreciendo tus servicios?</p>
+
+    <div class="type-selector" style="margin-bottom:32px;">
+      <button class="type-btn selected" onclick="selectType(this)">
+        <span class="type-icon">🌿</span>
+        <div class="type-label">Soy paciente</div>
+      </button>
+      <button class="type-btn" onclick="selectType(this)">
+        <span class="type-icon">🩺</span>
+        <div class="type-label">Soy psicólogo/a</div>
+      </button>
+      <button class="type-btn" onclick="selectType(this)" style="opacity:0.5;pointer-events:none;">
+        <span class="type-icon">🔧</span>
+        <div class="type-label">Otro (pronto)</div>
+      </button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" placeholder="Ej: Sofía">
+      </div>
+      <div class="form-group">
+        <label>Apellido</label>
+        <input type="text" placeholder="Ej: Martínez">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" placeholder="tu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="form-group" id="licenseField" style="display:none;">
+        <label>N° de matrícula</label>
+        <input type="text" placeholder="Ej: MN 12345">
+      </div>
+      <div class="form-group" id="specField" style="display:none;">
+        <label>Especialidad principal</label>
+        <select>
+          <option>TCC - Terapia Cognitivo Conductual</option>
+          <option>Psicoanálisis</option>
+          <option>Gestalt</option>
+          <option>Sistémica</option>
+          <option>ACT</option>
+          <option>Otra</option>
+        </select>
+      </div>
+      <div class="form-group full" id="bioField" style="display:none;">
+        <label>Bio profesional</label>
+        <textarea placeholder="Contá brevemente tu enfoque, experiencia y con quiénes trabajás..."></textarea>
+      </div>
+      <div class="form-group full">
+        <button class="submit-btn" onclick="showToast('✅ ¡Cuenta creada! Bienvenido/a a Self.')">Crear cuenta →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BACKEND / ARQUITECTURA ══ -->
+<div id="view-backend" class="view">
+  <div class="docs-page">
+    <div>
+      <h2>Arquitectura Django</h2>
+      <p>Stack recomendado, modelos de base de datos y endpoints de la API REST para Self.</p>
+    </div>
+
+    <!-- Stack -->
+    <div class="docs-section">
+      <h3>🛠 Stack recomendado</h3>
+      <div class="model-grid">
+        <div class="model-card">
+          <div class="model-name">Backend</div>
+          <div class="model-fields">Django 5.x<br>Django REST Framework<br>djangorestframework-simplejwt</div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Base de datos</div>
+          <div class="model-fields">PostgreSQL (prod)<br>SQLite (dev)<br>django-storages (media)</div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Autenticación</div>
+          <div class="model-fields">JWT (access + refresh)<br>AbstractBaseUser<br>OAuth2 (futuro)</div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Deploy</div>
+          <div class="model-fields">Docker + Gunicorn<br>Nginx<br>Railway / Render</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modelos -->
+    <div class="docs-section">
+      <h3>📦 Modelos principales <span>models.py</span></h3>
+      <pre><span class="cm"># apps/users/models.py</span>
+<span class="kw">from</span> django.contrib.auth.models <span class="kw">import</span> AbstractBaseUser, BaseUserManager
+<span class="kw">from</span> django.db <span class="kw">import</span> models
+
+<span class="kw">class</span> <span class="cl">UserType</span>(models.TextChoices):
+    PATIENT    = <span class="str">'patient'</span>,    <span class="str">'Paciente'</span>
+    PSYCHOLOGIST = <span class="str">'psychologist'</span>, <span class="str">'Psicólogo/a'</span>
+    PROVIDER   = <span class="str">'provider'</span>,   <span class="str">'Proveedor (futuro)'</span>
+
+<span class="kw">class</span> <span class="cl">User</span>(AbstractBaseUser):
+    email      = models.<span class="fn">EmailField</span>(unique=True)
+    first_name = models.<span class="fn">CharField</span>(max_length=<span class="str">100</span>)
+    last_name  = models.<span class="fn">CharField</span>(max_length=<span class="str">100</span>)
+    user_type  = models.<span class="fn">CharField</span>(max_length=<span class="str">20</span>, choices=UserType.choices)
+    avatar     = models.<span class="fn">ImageField</span>(upload_to=<span class="str">'avatars/'</span>, blank=True)
+    created_at = models.<span class="fn">DateTimeField</span>(auto_now_add=True)
+    is_active  = models.<span class="fn">BooleanField</span>(default=True)
+
+    USERNAME_FIELD = <span class="str">'email'</span>
+
+<span class="kw">class</span> <span class="cl">PsychologistProfile</span>(models.Model):
+    user         = models.<span class="fn">OneToOneField</span>(User, on_delete=models.CASCADE)
+    license_num  = models.<span class="fn">CharField</span>(max_length=<span class="str">50</span>)       <span class="cm"># N° matrícula</span>
+    specialty    = models.<span class="fn">CharField</span>(max_length=<span class="str">100</span>)
+    approach     = models.<span class="fn">CharField</span>(max_length=<span class="str">100</span>)      <span class="cm"># TCC, Gestalt, etc.</span>
+    bio          = models.<span class="fn">TextField</span>()
+    price_min    = models.<span class="fn">DecimalField</span>(max_digits=<span class="str">8</span>, decimal_places=<span class="str">2</span>)
+    modality     = models.<span class="fn">CharField</span>(max_length=<span class="str">20</span>)         <span class="cm"># online/presencial/ambas</span>
+    location     = models.<span class="fn">CharField</span>(max_length=<span class="str">200</span>, blank=True)
+    is_verified  = models.<span class="fn">BooleanField</span>(default=False)
+    rating_avg   = models.<span class="fn">FloatField</span>(default=<span class="str">0</span>)
+
+<span class="kw">class</span> <span class="cl">SwipeAction</span>(models.Model):  <span class="cm"># el corazón del match</span>
+    patient    = models.<span class="fn">ForeignKey</span>(User, related_name=<span class="str">'swipes_sent'</span>)
+    target     = models.<span class="fn">ForeignKey</span>(User, related_name=<span class="str">'swipes_received'</span>)
+    liked      = models.<span class="fn">BooleanField</span>()
+    created_at = models.<span class="fn">DateTimeField</span>(auto_now_add=True)
+
+<span class="kw">class</span> <span class="cl">Match</span>(models.Model):
+    patient      = models.<span class="fn">ForeignKey</span>(User, related_name=<span class="str">'matches_as_patient'</span>)
+    psychologist = models.<span class="fn">ForeignKey</span>(User, related_name=<span class="str">'matches_as_psy'</span>)
+    matched_at   = models.<span class="fn">DateTimeField</span>(auto_now_add=True)
+    is_active    = models.<span class="fn">BooleanField</span>(default=True)</pre>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="docs-section">
+      <h3>🔌 API Endpoints <span>urls.py</span></h3>
+      <div class="endpoint-list">
+        <div class="endpoint"><span class="method post">POST</span><span class="endpoint-path">/api/auth/register/</span><span class="endpoint-desc">Crear cuenta (paciente o psicólogo)</span></div>
+        <div class="endpoint"><span class="method post">POST</span><span class="endpoint-path">/api/auth/login/</span><span class="endpoint-desc">Login → JWT tokens</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/psychologists/</span><span class="endpoint-desc">Listar psicólogos (con filtros)</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/psychologists/{id}/</span><span class="endpoint-desc">Detalle de un psicólogo</span></div>
+        <div class="endpoint"><span class="method post">POST</span><span class="endpoint-path">/api/swipe/</span><span class="endpoint-desc">Registrar swipe (like/nope)</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/matches/</span><span class="endpoint-desc">Ver matches del usuario</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/discover/</span><span class="endpoint-desc">Feed de tarjetas (excluye ya vistos)</span></div>
+        <div class="endpoint"><span class="method put">PUT</span><span class="endpoint-path">/api/profile/</span><span class="endpoint-desc">Actualizar perfil propio</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/admin/</span><span class="endpoint-desc">Django Admin (gestión de usuarios)</span></div>
+      </div>
+    </div>
+
+    <!-- Setup -->
+    <div class="docs-section">
+      <h3>🚀 Setup rápido</h3>
+      <pre><span class="cm"># 1. Crear proyecto</span>
+django-admin startproject self_project
+<span class="fn">cd</span> self_project
+python manage.py startapp users
+python manage.py startapp matching
+
+<span class="cm"># 2. Instalar dependencias</span>
+pip install djangorestframework djangorestframework-simplejwt \
+            django-cors-headers Pillow psycopg2-binary
+
+<span class="cm"># 3. settings.py — agregar apps</span>
+INSTALLED_APPS = [
+    ...
+    <span class="str">'rest_framework'</span>,
+    <span class="str">'corsheaders'</span>,
+    <span class="str">'users'</span>,
+    <span class="str">'matching'</span>,
+]
+
+AUTH_USER_MODEL = <span class="str">'users.User'</span>
+
+<span class="cm"># 4. Migrar y correr</span>
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver</pre>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── View switching
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    const tabs = ['landing','discover','register','backend'];
+    document.querySelectorAll('.nav-tab')[tabs.indexOf(name)]?.classList.add('active');
+  }
+
+  // ── Filter chips
+  document.querySelectorAll('.filter-chips').forEach(group => {
+    group.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      });
+    });
+  });
+
+  // ── Type selector (register)
+  function selectType(btn) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const isPsy = btn.querySelector('.type-label').textContent.includes('psicólogo');
+    document.getElementById('licenseField').style.display = isPsy ? 'flex' : 'none';
+    document.getElementById('specField').style.display = isPsy ? 'flex' : 'none';
+    document.getElementById('bioField').style.display = isPsy ? 'flex' : 'none';
+  }
+
+  // ── Swipe logic
+  let cardCount = 3;
+  let isDragging = false, startX = 0, currentX = 0;
+
+  function swipeCard(dir) {
+    const stack = document.getElementById('cardStack');
+    const top = stack.querySelector('.psy-card:last-child');
+    if (!top) return;
+
+    const likeOverlay = top.querySelector('.overlay-like');
+    const nopeOverlay = top.querySelector('.overlay-nope');
+
+    if (dir === 'right') {
+      likeOverlay.style.opacity = '1';
+      top.style.transform = 'translateX(120%) rotate(20deg)';
+      showToast('💚 ¡Match! Esperando confirmación...');
+    } else {
+      nopeOverlay.style.opacity = '1';
+      top.style.transform = 'translateX(-120%) rotate(-20deg)';
+    }
+
+    top.style.transition = 'transform 0.4s ease, opacity 0.4s';
+    top.style.opacity = '0';
+
+    setTimeout(() => {
+      top.remove();
+      cardCount--;
+      document.getElementById('card-counter').textContent =
+        cardCount > 0 ? `${cardCount} psicólogo${cardCount > 1 ? 's' : ''} cerca de vos` : '¡Volvé más tarde para más! 🌿';
+    }, 400);
+  }
+
+  // Drag to swipe
+  const stack = document.getElementById('cardStack');
+  stack.addEventListener('mousedown', e => {
+    isDragging = true; startX = e.clientX;
+    const top = stack.querySelector('.psy-card:last-child');
+    if (top) top.style.transition = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    currentX = e.clientX - startX;
+    const top = stack.querySelector('.psy-card:last-child');
+    if (!top) return;
+    const rotate = currentX * 0.05;
+    top.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+    const likeOv = top.querySelector('.overlay-like');
+    const nopeOv = top.querySelector('.overlay-nope');
+    likeOv.style.opacity = currentX > 50 ? Math.min((currentX - 50) / 80, 1) : 0;
+    nopeOv.style.opacity = currentX < -50 ? Math.min((-currentX - 50) / 80, 1) : 0;
+  });
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    if (currentX > 100) swipeCard('right');
+    else if (currentX < -100) swipeCard('left');
+    else {
+      const top = stack.querySelector('.psy-card:last-child');
+      if (top) {
+        top.style.transition = 'transform 0.4s ease';
+        top.style.transform = '';
+        top.querySelectorAll('.card-overlay').forEach(o => o.style.opacity = 0);
+      }
+    }
+    currentX = 0;
+  });
+
+  // ── Toast
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>
