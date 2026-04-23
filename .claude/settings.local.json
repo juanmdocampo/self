@@ -20,7 +20,10 @@
       "Bash(python manage.py showmigrations)",
       "Bash(python manage.py createsuperuser --username admin --email admin@self.com --noinput)",
       "Bash(python manage.py shell -c \"from backend.core.models import User; u = User.objects.get\\(username='admin'\\); u.set_password\\('admin1234'\\); u.save\\(\\); print\\('password set'\\)\")",
-      "Bash(python -m pip install gunicorn whitenoise dj-database-url)"
+      "Bash(python -m pip install gunicorn whitenoise dj-database-url)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
