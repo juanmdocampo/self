@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Match, SwipeAction, User
 from .serializers import (
     LoginSerializer, MatchSerializer, RegisterSerializer,
-    SwipeSerializer, UserSerializer,
+    SwipeSerializer, UpdateProfileSerializer, UserSerializer,
 )
 
 
@@ -31,10 +31,21 @@ def login(request):
     return Response({'token': token.key, 'user': UserSerializer(user).data})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me(request):
-    return Response(UserSerializer(request.user).data)
+    if request.method == 'GET':
+        return Response(UserSerializer(request.user).data)
+
+    user = request.user
+    if 'avatar' in request.FILES:
+        user.avatar = request.FILES['avatar']
+        user.save()
+
+    serializer = UpdateProfileSerializer(user, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(UserSerializer(user).data)
 
 
 @api_view(['GET'])
@@ -48,7 +59,7 @@ def psychologists_list(request):
     max_price = request.query_params.get('max_price')
 
     if specialty:
-        qs = qs.filter(psychologist_profile__specialties__contains=[specialty])
+        qs = qs.filter(psychologist_profile__specialties__icontains=specialty)
     if modality:
         qs = qs.filter(psychologist_profile__modality__in=[modality, 'both'])
     if max_price:

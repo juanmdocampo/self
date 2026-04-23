@@ -50,6 +50,31 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
+class UpdatePsychologistProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PsychologistProfile
+        fields = ['specialties', 'modality', 'session_price', 'years_experience', 'city', 'languages', 'license_number']
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    psychologist_profile = UpdatePsychologistProfileSerializer(required=False)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'bio', 'psychologist_profile']
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('psychologist_profile', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if profile_data and hasattr(instance, 'psychologist_profile'):
+            for attr, value in profile_data.items():
+                setattr(instance.psychologist_profile, attr, value)
+            instance.psychologist_profile.save()
+        return instance
+
+
 class SwipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwipeAction

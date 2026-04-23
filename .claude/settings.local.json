@@ -1,7 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python manage.py makemigrations)"
+      "Bash(python manage.py makemigrations)",
+      "Bash(python -m pip freeze)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npx tailwindcss *)",
+      "Bash(npm run *)",
+      "Bash(pip show *)",
+      "Bash(pip install *)",
+      "Bash(python -m pip install psycopg2-binary python-decouple)",
+      "Bash(psql --version)",
+      "Bash(pg_isready)",
+      "PowerShell(psql --version 2>&1)",
+      "PowerShell(pg_isready 2>&1)",
+      "Bash(python manage.py migrate)",
+      "Bash(python seed.py)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py showmigrations)",
+      "Bash(python manage.py createsuperuser --username admin --email admin@self.com --noinput)",
+      "Bash(python manage.py shell -c \"from backend.core.models import User; u = User.objects.get\\(username='admin'\\); u.set_password\\('admin1234'\\); u.save\\(\\); print\\('password set'\\)\")",
+      "Bash(python -m pip install gunicorn whitenoise dj-database-url)"
     ]
   }
 }
