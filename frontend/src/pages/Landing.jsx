@@ -11,9 +11,9 @@ export default function Landing() {
   }
 
   return (
-    <div className="grid grid-cols-2 min-h-[calc(100vh-65px)] max-lg:grid-cols-1">
+    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-65px)]">
       {/* Left */}
-      <div className="flex flex-col justify-center gap-7 px-16 py-20 max-lg:px-8 max-lg:py-12">
+      <div className="flex flex-col justify-center gap-6 sm:gap-7 px-6 sm:px-10 lg:px-16 py-12 sm:py-16 lg:py-20">
         <div className="inline-flex items-center gap-2 bg-sage/15 border border-sage/40 px-3.5 py-1.5 rounded-full text-xs text-sage-dark font-medium w-fit">
           ✦ Psicología · Bienestar · Conexión
         </div>
@@ -43,7 +43,7 @@ export default function Landing() {
           </button>
         </div>
 
-        <div className="flex gap-8 pt-2">
+        <div className="flex gap-6 sm:gap-8 pt-2 flex-wrap">
           {[
             { num: '240+', label: 'Profesionales activos' },
             { num: '1.2k', label: 'Conexiones realizadas' },
@@ -58,7 +58,7 @@ export default function Landing() {
       </div>
 
       {/* Right */}
-      <div className="bg-gradient-to-br from-[#D4E8D5] to-[#E8D4C8] flex items-center justify-center p-16 relative overflow-hidden max-lg:hidden">
+      <div className="hidden lg:flex bg-gradient-to-br from-[#D4E8D5] to-[#E8D4C8] items-center justify-center p-16 relative overflow-hidden">
         <div className="absolute w-[400px] h-[400px] rounded-full bg-white/25 -top-24 -right-24" />
         <div className="relative w-72 h-96">
           <div className="absolute top-0 left-5 w-64 h-[360px] bg-white rounded-3xl shadow-card rotate-[-3deg]" />

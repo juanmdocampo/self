@@ -118,7 +118,7 @@ self/
 │   └── backend/      # settings, urls
 ├── frontend/         # React + Vite + Tailwind
 │   ├── src/
-│   │   ├── pages/    # Discover, Matches, Profile, Login, Register
+│   │   ├── pages/    # Discover, Matches, Recommend, Profile, Login, Register
 │   │   ├── components/
 │   │   └── api/      # fetch calls al backend
 └── requirements.txt
