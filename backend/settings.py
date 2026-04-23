@@ -43,6 +43,11 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=bool)
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://self-production-c496.up.railway.app',
+    'http://self-production-c496.up.railway.app',
+]
+
 ROOT_URLCONF = 'backend.urls'
 
 FRONTEND_DIST = BASE_DIR / 'frontend' / 'dist'
