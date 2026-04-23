@@ -24,8 +24,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',
-    'cloudinary',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -134,4 +132,5 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Cloudinary — used in production when CLOUDINARY_URL is set
 CLOUDINARY_URL = config('CLOUDINARY_URL', default=None)
 if CLOUDINARY_URL:
+    INSTALLED_APPS += ['cloudinary_storage', 'cloudinary']
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
