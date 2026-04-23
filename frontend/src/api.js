@@ -2,7 +2,7 @@ const BASE = '/api'
 
 function authHeaders(token) {
   const h = { 'Content-Type': 'application/json' }
-  if (token) h['Authorization'] = `Token ${token}`
+  if (token) h['Authorization'] = `Bearer ${token}`
   return h
 }
 
@@ -13,7 +13,7 @@ export async function login(username, password) {
     body: JSON.stringify({ username, password }),
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data.non_field_errors?.[0] || 'Credenciales inválidas.')
+  if (!res.ok) throw new Error(data.detail || data.non_field_errors?.[0] || 'Credenciales inválidas.')
   return data
 }
 
@@ -26,6 +26,17 @@ export async function register(body) {
   const data = await res.json()
   if (!res.ok) throw new Error(Object.values(data).flat().join(' ') || 'Error al registrarse.')
   return data
+}
+
+export async function refreshAccessToken(refreshToken) {
+  const res = await fetch(`${BASE}/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: refreshToken }),
+  })
+  if (!res.ok) throw new Error('Sesión expirada.')
+  const data = await res.json()
+  return data.access
 }
 
 export async function fetchMe(token) {
@@ -50,7 +61,7 @@ export async function uploadAvatar(token, file) {
   fd.append('avatar', file)
   const res = await fetch(`${BASE}/auth/me/`, {
     method: 'PATCH',
-    headers: { Authorization: `Token ${token}` },
+    headers: { Authorization: `Bearer ${token}` },
     body: fd,
   })
   const json = await res.json()
@@ -85,6 +96,14 @@ export async function fetchMatches(token) {
   const res = await fetch(`${BASE}/matches/`, { headers: authHeaders(token) })
   if (!res.ok) return []
   return res.json()
+}
+
+export async function deleteMatch(token, matchId) {
+  const res = await fetch(`${BASE}/matches/${matchId}/`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Error al eliminar match.')
 }
 
 export async function submitRecommendation(body) {

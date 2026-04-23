@@ -2,13 +2,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
-const TABS = [
-  { path: '/', label: 'Inicio' },
-  { path: '/discover', label: 'Descubrir' },
-  { path: '/recommend', label: 'Me recomiendan' },
-  { path: '/register', label: 'Registrarse' },
-]
-
 export default function Nav() {
   const { currentUser, logout, openLoginModal } = useAuth()
   const { showToast } = useToast()
@@ -25,6 +18,14 @@ export default function Nav() {
     ? ([currentUser.first_name?.[0], currentUser.last_name?.[0]].filter(Boolean).join('').toUpperCase() || currentUser.username?.[0]?.toUpperCase())
     : null
 
+  const tabs = [
+    { path: '/', label: 'Inicio', show: true },
+    { path: '/discover', label: 'Descubrir', show: true },
+    { path: '/matches', label: 'Mis matches', show: !!currentUser && currentUser.role === 'patient' },
+    { path: '/matches', label: 'Me recomiendan', show: !!currentUser && currentUser.role === 'psychologist' },
+    { path: '/register', label: 'Registrarse', show: !currentUser },
+  ]
+
   return (
     <nav className="sticky top-0 z-50 bg-cream border-b border-warm-dark/[0.08] flex items-center justify-between px-10 py-4">
       <Link to="/" className="font-serif text-3xl font-bold tracking-tight text-warm-dark">
@@ -32,11 +33,11 @@ export default function Nav() {
       </Link>
 
       <div className="flex gap-1.5">
-        {TABS.filter(tab => !(tab.path === '/register' && currentUser)).map(tab => {
+        {tabs.filter(t => t.show).map(tab => {
           const active = location.pathname === tab.path
           return (
             <Link
-              key={tab.path}
+              key={tab.label}
               to={tab.path}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                 active

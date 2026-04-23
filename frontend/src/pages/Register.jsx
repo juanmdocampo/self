@@ -67,7 +67,7 @@ export default function Register() {
     setLoading(true)
     try {
       const data = await register(body)
-      setAuth(data.token, data.user)
+      setAuth(data.access, data.refresh, data.user)
       showToast(`¡Bienvenido/a a Self, ${data.user.first_name || data.user.username}! 🌿`)
       navigate('/discover')
     } catch (err) {

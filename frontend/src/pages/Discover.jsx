@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import FilterSidebar from '../components/FilterSidebar'
 import SwipeStack from '../components/SwipeStack'
@@ -8,24 +7,19 @@ import PsychDetailModal from '../components/PsychDetailModal'
 import { fetchPsychologists, fetchMatches } from '../api'
 
 export default function Discover() {
-  const { token, openLoginModal } = useAuth()
-  const navigate = useNavigate()
-  const [queue, setQueue] = useState([])
+  const { token } = useAuth()
+  const [psychs, setPsychs] = useState([])
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedPsych, setSelectedPsych] = useState(null)
   const swipeDoRef = useRef(null)
 
-  useEffect(() => {
-    if (!token) { openLoginModal(); navigate('/') }
-  }, [token, openLoginModal, navigate])
-
   const load = useCallback(async (filters = {}) => {
     if (!token) return
     setLoading(true); setError('')
     try {
-      setQueue(await fetchPsychologists(token, filters))
+      setPsychs(await fetchPsychologists(token, filters))
     } catch {
       setError('Error al cargar. ¿Está el servidor corriendo?')
     } finally {
@@ -40,7 +34,10 @@ export default function Discover() {
 
   useEffect(() => { load(); loadMatches() }, [load, loadMatches])
 
-  if (!token) return null
+  const handleSwipeUpdate = useCallback((psychId, action) => {
+    setPsychs(prev => prev.map(p => p.id === psychId ? { ...p, swipe_status: action } : p))
+    if (action === 'like') loadMatches()
+  }, [loadMatches])
 
   return (
     <>
@@ -53,14 +50,6 @@ export default function Discover() {
         </div>
 
         <div className="flex flex-col items-center justify-center gap-2 py-10 px-5">
-          <div className="text-xs text-warm-mid mb-4">
-            🧭{' '}
-            {loading ? 'Cargando...'
-              : error || (queue.length > 0
-                ? `${queue.length} psicólogo${queue.length > 1 ? 's' : ''} para explorar`
-                : '¡Ya los viste todos! 🌿')}
-          </div>
-
           {loading ? (
             <div className="w-[360px] h-[520px] flex flex-col items-center justify-center gap-3 text-warm-mid">
               <div className="text-5xl">⏳</div>
@@ -70,12 +59,11 @@ export default function Discover() {
             <div className="w-[360px] h-[520px] flex flex-col items-center justify-center gap-3 text-warm-mid text-center px-6">
               <div className="text-5xl">⚠️</div>
               <div>{error}</div>
-              <code className="text-xs bg-warm-dark/5 px-3 py-1 rounded-lg">python manage.py runserver</code>
             </div>
           ) : (
             <SwipeStack
-              queue={queue}
-              setQueue={setQueue}
+              psychs={psychs}
+              onSwipeUpdate={handleSwipeUpdate}
               onMatchFound={loadMatches}
               onInfo={psych => setSelectedPsych(psych)}
               swipeRef={fn => { swipeDoRef.current = fn }}
@@ -90,7 +78,7 @@ export default function Discover() {
 
       <PsychDetailModal
         psych={selectedPsych}
-        index={queue.findIndex(p => p.id === selectedPsych?.id)}
+        index={psychs.findIndex(p => p.id === selectedPsych?.id)}
         onClose={() => setSelectedPsych(null)}
         onSwipe={dir => swipeDoRef.current?.(dir)}
       />

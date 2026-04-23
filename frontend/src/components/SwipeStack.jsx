@@ -6,26 +6,45 @@ import { swipeAction } from '../api'
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
 
-function PsychCard({ psych, index, isTop, topCardRef, onDragStart }) {
+function StatusBadge({ status }) {
+  if (!status) return null
+  if (status === 'like') return (
+    <div className="absolute top-3 left-3 z-10 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+      ♥ Elegido
+    </div>
+  )
+  return (
+    <div className="absolute top-3 left-3 z-10 bg-gray-400 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+      ✕ Pasado
+    </div>
+  )
+}
+
+function PsychCard({ psych, stackIndex, isTop, topCardRef, onDragStart }) {
   const p = psych.psychologist_profile || {}
   const name = [psych.first_name, psych.last_name].filter(Boolean).join(' ') || psych.username
   const specialties = (p.specialties || []).slice(0, 3)
   const modality = MODALITY_LABEL[p.modality] || ''
-  const avatar = AVATARS[index % AVATARS.length]
+  const avatar = AVATARS[psych.id % AVATARS.length]
   const price = p.session_price ? `$${Number(p.session_price).toLocaleString()}` : ''
   const years = p.years_experience ? `${p.years_experience} años` : ''
 
-  const stackClass = ['', 'rotate-[-2deg] translate-y-2', 'rotate-[2deg] translate-y-4'][Math.min(index, 2)] || 'rotate-[-1deg] translate-y-5'
+  const stackClass = [
+    '',
+    'rotate-[-2deg] translate-y-2',
+    'rotate-[2deg] translate-y-4',
+  ][Math.min(stackIndex, 2)] || 'rotate-[-1deg] translate-y-5'
 
   return (
     <div
       ref={isTop ? topCardRef : null}
       data-id={psych.id}
       className={`absolute w-[360px] h-[520px] rounded-3xl bg-card-bg shadow-card overflow-hidden select-none ${isTop ? 'z-30 cursor-grab' : ''} ${stackClass}`}
-      style={{ zIndex: 3 - Math.min(index, 2) }}
+      style={{ zIndex: 3 - Math.min(stackIndex, 2) }}
       onMouseDown={isTop ? onDragStart : undefined}
       onTouchStart={isTop ? onDragStart : undefined}
     >
+      <StatusBadge status={psych.swipe_status} />
       <div className="w-full h-[280px] bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[5rem] relative">
         {psych.avatar
           ? <img src={psych.avatar} alt={name} className="absolute inset-0 w-full h-full object-cover" />
@@ -66,19 +85,25 @@ function PsychCard({ psych, index, isTop, topCardRef, onDragStart }) {
   )
 }
 
-export default function SwipeStack({ queue, setQueue, onMatchFound, onInfo, swipeRef }) {
+export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo, swipeRef }) {
   const { token } = useAuth()
   const { showToast } = useToast()
+  const [idx, setIdx] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const topCardRef = useRef(null)
   const drag = useRef({ active: false, startX: 0, currentX: 0 })
 
+  const current = psychs[idx]
+  const visible = psychs.slice(idx, idx + 3)
+  const done = idx >= psychs.length
+
   const doSwipe = useCallback(async (dir) => {
-    if (isSwiping || queue.length === 0 || !topCardRef.current) return
+    if (isSwiping || !current || !topCardRef.current) return
     setIsSwiping(true)
 
     const card = topCardRef.current
-    const psychId = card.dataset.id
+    const psychId = Number(card.dataset.id)
+    const action = dir === 'right' ? 'like' : 'pass'
 
     const likeEl = card.querySelector('.overlay-like')
     const nopeEl = card.querySelector('.overlay-nope')
@@ -90,20 +115,21 @@ export default function SwipeStack({ queue, setQueue, onMatchFound, onInfo, swip
     card.style.opacity = '0'
 
     try {
-      const data = await swipeAction(token, psychId, dir === 'right' ? 'like' : 'pass')
+      const data = await swipeAction(token, psychId, action)
+      onSwipeUpdate?.(psychId, action)
       if (data.match) {
         showToast('💚 ¡Match! Psicólogo/a agregado a tus matches.')
         onMatchFound?.()
       } else if (dir === 'right') {
-        showToast('👍 ¡Les escribiremos cuando acepten!')
+        showToast('👍 ¡Agregado a tus matches!')
       }
     } catch {}
 
     setTimeout(() => {
-      setQueue(prev => prev.slice(1))
+      setIdx(prev => prev + 1)
       setIsSwiping(false)
     }, 420)
-  }, [isSwiping, queue, token, showToast, onMatchFound, setQueue])
+  }, [isSwiping, current, token, showToast, onMatchFound, onSwipeUpdate])
 
   useEffect(() => { swipeRef?.(doSwipe) }, [doSwipe, swipeRef])
 
@@ -156,25 +182,41 @@ export default function SwipeStack({ queue, setQueue, onMatchFound, onInfo, swip
     }
   }, [doSwipe])
 
+  const goBack = () => {
+    if (idx > 0 && !isSwiping) setIdx(prev => prev - 1)
+  }
+
   return (
     <div className="flex flex-col items-center gap-7">
-      {queue.length === 0 ? (
-        <div className="w-[360px] h-[520px] flex flex-col items-center justify-center gap-3 text-warm-mid text-center px-6">
+      {psychs.length > 0 && (
+        <div className="text-xs text-warm-mid">
+          {done ? `${psychs.length} de ${psychs.length}` : `${idx + 1} de ${psychs.length}`}
+        </div>
+      )}
+
+      {done ? (
+        <div className="w-[360px] h-[520px] flex flex-col items-center justify-center gap-4 text-warm-mid text-center px-6">
           <div className="text-5xl">🌿</div>
           <div className="font-medium">¡Ya los viste todos!</div>
-          <div className="text-sm">Volvé más tarde para ver nuevos psicólogos.</div>
+          <div className="text-sm">Podés volver a explorar desde el principio.</div>
+          <button
+            onClick={() => setIdx(0)}
+            className="mt-2 px-6 py-2.5 rounded-xl bg-sage-dark text-white text-sm font-medium hover:bg-sage transition-all"
+          >
+            Ver de nuevo →
+          </button>
         </div>
       ) : (
         <div className="relative w-[360px] h-[520px]">
-          {[...queue].slice(0, 3).reverse().map((psych, ri) => {
-            const visibleCount = Math.min(queue.length, 3)
-            const idx = visibleCount - 1 - ri
+          {[...visible].reverse().map((psych, ri) => {
+            const visibleCount = visible.length
+            const stackIndex = visibleCount - 1 - ri
             const isTop = ri === visibleCount - 1
             return (
               <PsychCard
                 key={psych.id}
                 psych={psych}
-                index={idx}
+                stackIndex={stackIndex}
                 isTop={isTop}
                 topCardRef={isTop ? topCardRef : null}
                 onDragStart={handleDragStart}
@@ -186,18 +228,27 @@ export default function SwipeStack({ queue, setQueue, onMatchFound, onInfo, swip
 
       <div className="flex items-center gap-4">
         <button
+          onClick={goBack}
+          disabled={idx === 0 || isSwiping}
+          className="w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center text-lg hover:bg-amber-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Volver"
+        >↩</button>
+        <button
           onClick={() => doSwipe('left')}
-          className="w-14 h-14 rounded-full bg-white shadow-card flex items-center justify-center text-2xl hover:bg-red-50 hover:scale-110 transition-all"
+          disabled={done || isSwiping}
+          className="w-14 h-14 rounded-full bg-white shadow-card flex items-center justify-center text-2xl hover:bg-red-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           title="Pasar"
         >✕</button>
         <button
           onClick={() => doSwipe('right')}
-          className="w-16 h-16 rounded-full bg-sage-dark flex items-center justify-center text-3xl hover:bg-sage hover:scale-110 transition-all shadow-card"
+          disabled={done || isSwiping}
+          className="w-16 h-16 rounded-full bg-sage-dark flex items-center justify-center text-3xl hover:bg-sage hover:scale-110 transition-all shadow-card disabled:opacity-30 disabled:cursor-not-allowed"
           title="Me interesa"
         >♥</button>
         <button
-          onClick={() => queue[0] && onInfo?.(queue[0])}
-          className="w-14 h-14 rounded-full bg-white shadow-card flex items-center justify-center text-2xl hover:bg-blue-50 hover:scale-110 transition-all"
+          onClick={() => current && onInfo?.(current)}
+          disabled={done}
+          className="w-14 h-14 rounded-full bg-white shadow-card flex items-center justify-center text-2xl hover:bg-blue-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           title="Ver perfil"
         >ℹ</button>
       </div>
