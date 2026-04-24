@@ -6,81 +6,100 @@ import { swipeAction } from '../api'
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
 
-function StatusBadge({ status }) {
-  if (!status) return null
-  if (status === 'like') return (
-    <div className="absolute top-3 left-3 z-10 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
-      ♥ Elegido
-    </div>
-  )
+function Dots({ total, current, onSelect }) {
+  if (total <= 1) return null
+  const MAX = 7
+  let start = Math.max(0, current - Math.floor(MAX / 2))
+  const end = Math.min(total, start + MAX)
+  start = Math.max(0, end - MAX)
+
   return (
-    <div className="absolute top-3 left-3 z-10 bg-gray-400 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
-      ✕ Pasado
+    <div className="flex items-center gap-1.5">
+      {start > 0 && <span className="text-warm-mid/40 text-xs">·</span>}
+      {Array.from({ length: end - start }, (_, i) => i + start).map(i => (
+        <button
+          key={i}
+          onClick={() => onSelect(i)}
+          className={`rounded-full transition-all duration-200 ${
+            i === current
+              ? 'w-4 h-1.5 bg-warm-dark'
+              : 'w-1.5 h-1.5 bg-warm-dark/20 hover:bg-warm-dark/40'
+          }`}
+        />
+      ))}
+      {end < total && <span className="text-warm-mid/40 text-xs">·</span>}
     </div>
   )
 }
 
-function PsychCard({ psych, stackIndex, isTop, topCardRef, onDragStart }) {
+function PsychCard({ psych, opacity, dragRef }) {
   const p = psych.psychologist_profile || {}
   const name = [psych.first_name, psych.last_name].filter(Boolean).join(' ') || psych.username
-  const specialties = (p.specialties || []).slice(0, 3)
+  const specialties = p.specialties || []
   const modality = MODALITY_LABEL[p.modality] || ''
   const avatar = AVATARS[psych.id % AVATARS.length]
-  const price = p.session_price ? `$${Number(p.session_price).toLocaleString()}` : ''
-  const years = p.years_experience ? `${p.years_experience} años` : ''
-
-  const stackClass = [
-    '',
-    'rotate-[-2deg] translate-y-2',
-    'rotate-[2deg] translate-y-4',
-  ][Math.min(stackIndex, 2)] || 'rotate-[-1deg] translate-y-5'
+  const price = p.session_price ? `$${Number(p.session_price).toLocaleString()}` : null
+  const years = p.years_experience ? `${p.years_experience} años de exp.` : null
+  const liked = psych.swipe_status === 'like'
 
   return (
     <div
-      ref={isTop ? topCardRef : null}
-      data-id={psych.id}
-      className={`absolute left-0 right-0 h-[460px] sm:h-[520px] rounded-3xl bg-card-bg shadow-card overflow-hidden select-none ${isTop ? 'z-30 cursor-grab' : ''} ${stackClass}`}
-      style={{ zIndex: 3 - Math.min(stackIndex, 2) }}
-      onMouseDown={isTop ? onDragStart : undefined}
-      onTouchStart={isTop ? onDragStart : undefined}
+      ref={dragRef}
+      className="w-full rounded-3xl bg-card-bg shadow-card overflow-hidden select-none"
+      style={{ opacity, transition: 'opacity 0.15s ease' }}
     >
-      <StatusBadge status={psych.swipe_status} />
-      <div className="w-full h-[220px] sm:h-[280px] bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[4rem] sm:text-[5rem] relative">
+      {/* Photo */}
+      <div className="w-full h-[240px] sm:h-[280px] bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[5rem] relative">
         {psych.avatar
           ? <img src={psych.avatar} alt={name} className="absolute inset-0 w-full h-full object-cover" />
           : avatar
         }
+        {liked && (
+          <div className="absolute top-3 left-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+            ♥ Elegido
+          </div>
+        )}
         {p.is_accepting_patients && (
-          <div className="absolute top-3 right-3 bg-white rounded-full px-2 py-1 text-xs font-medium text-sage-dark flex items-center gap-1">
-            <span className="text-sage text-[0.5rem]">●</span> Disponible
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-medium text-sage-dark flex items-center gap-1">
+            <span className="text-green-500 text-[0.5rem]">●</span> Disponible
           </div>
         )}
       </div>
-      <div className="p-4 sm:p-5">
-        <div className="font-serif text-xl sm:text-2xl font-bold mb-1">{name}</div>
-        <div className="text-xs text-sage-dark font-medium mb-2">
-          {modality}{p.city ? ` · ${p.city}` : ''}
+
+      {/* Info */}
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h2 className="font-serif text-2xl font-bold leading-tight">{name}</h2>
+          {price && (
+            <span className="text-sm font-semibold text-sage-dark flex-shrink-0 mt-1">{price}</span>
+          )}
         </div>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {specialties.map(s => (
-            <span key={s} className="px-2.5 py-1 rounded-full bg-sage/[0.12] text-xs text-sage-dark font-medium">{s}</span>
-          ))}
+
+        <div className="text-sm text-sage-dark font-medium mb-3">
+          {[modality, p.city].filter(Boolean).join(' · ')}
         </div>
-        <div className="flex gap-3 flex-wrap">
-          {p.city && <span className="text-xs text-warm-mid">📍 {p.city}</span>}
-          {price && <span className="text-xs text-warm-mid">💰 {price}</span>}
-          {years && <span className="text-xs text-warm-mid">💬 {years}</span>}
+
+        {specialties.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {specialties.slice(0, 5).map(s => (
+              <span key={s} className="px-2.5 py-1 rounded-full bg-sage/[0.12] text-xs text-sage-dark font-medium">{s}</span>
+            ))}
+            {specialties.length > 5 && (
+              <span className="px-2.5 py-1 rounded-full bg-warm-dark/[0.06] text-xs text-warm-mid">+{specialties.length - 5}</span>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-4 text-xs text-warm-mid mb-3">
+          {p.city && <span>📍 {p.city}</span>}
+          {years && <span>💬 {years}</span>}
+          {p.license_number && <span>🪪 {p.license_number}</span>}
         </div>
+
         {psych.bio && (
-          <p className="text-xs text-warm-mid mt-2 leading-relaxed line-clamp-2">{psych.bio}</p>
+          <p className="text-sm text-warm-mid leading-relaxed line-clamp-3">{psych.bio}</p>
         )}
       </div>
-      {isTop && (
-        <>
-          <div className="overlay-like absolute top-6 left-4 font-serif text-2xl sm:text-3xl font-bold px-3 py-1.5 rounded-lg border-[3px] border-sage-dark text-sage-dark opacity-0 pointer-events-none rotate-[-15deg] transition-opacity">MATCH</div>
-          <div className="overlay-nope absolute top-6 right-4 font-serif text-2xl sm:text-3xl font-bold px-3 py-1.5 rounded-lg border-[3px] border-red-500 text-red-500 opacity-0 pointer-events-none rotate-[15deg] transition-opacity">NOPE</div>
-        </>
-      )}
     </div>
   )
 }
@@ -89,171 +108,147 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo
   const { token } = useAuth()
   const { showToast } = useToast()
   const [idx, setIdx] = useState(0)
-  const [isSwiping, setIsSwiping] = useState(false)
-  const topCardRef = useRef(null)
-  const drag = useRef({ active: false, startX: 0, currentX: 0 })
+  const [displayIdx, setDisplayIdx] = useState(0)
+  const [cardOpacity, setCardOpacity] = useState(1)
+  const [likeLoading, setLikeLoading] = useState(false)
+  const cardRef = useRef(null)
+  const touch = useRef({ startX: 0, startY: 0 })
 
-  const current = psychs[idx]
-  const visible = psychs.slice(idx, idx + 3)
-  const done = idx >= psychs.length
+  const current = psychs[displayIdx]
+  const liked = current?.swipe_status === 'like'
 
-  const doSwipe = useCallback(async (dir) => {
-    if (isSwiping || !current || !topCardRef.current) return
-    setIsSwiping(true)
+  const navigateTo = useCallback((newIdx) => {
+    if (newIdx < 0 || newIdx >= psychs.length) return
+    setCardOpacity(0)
+    setTimeout(() => {
+      setIdx(newIdx)
+      setDisplayIdx(newIdx)
+      setCardOpacity(1)
+    }, 130)
+  }, [psychs.length])
 
-    const card = topCardRef.current
-    const psychId = Number(card.dataset.id)
-    const action = dir === 'right' ? 'like' : 'pass'
+  const goNext = useCallback(() => navigateTo(Math.min(idx + 1, psychs.length - 1)), [idx, psychs.length, navigateTo])
+  const goPrev = useCallback(() => navigateTo(Math.max(idx - 1, 0)), [idx, navigateTo])
 
-    const likeEl = card.querySelector('.overlay-like')
-    const nopeEl = card.querySelector('.overlay-nope')
-    if (dir === 'right' && likeEl) likeEl.style.opacity = '1'
-    if (dir === 'left' && nopeEl) nopeEl.style.opacity = '1'
-
-    card.style.transition = 'transform 0.4s ease, opacity 0.4s'
-    card.style.transform = dir === 'right' ? 'translateX(120%) rotate(20deg)' : 'translateX(-120%) rotate(-20deg)'
-    card.style.opacity = '0'
-
+  const handleLike = useCallback(async () => {
+    if (!current || likeLoading) return
+    const newAction = liked ? 'pass' : 'like'
+    setLikeLoading(true)
     try {
-      const data = await swipeAction(token, psychId, action)
-      onSwipeUpdate?.(psychId, action)
-      if (data.match) {
-        showToast('💚 ¡Match! Psicólogo/a agregado a tus matches.')
+      await swipeAction(token, current.id, newAction)
+      onSwipeUpdate?.(current.id, newAction)
+      if (newAction === 'like') {
+        showToast('💚 ¡Agregado a tus matches!')
         onMatchFound?.()
-      } else if (dir === 'right') {
-        showToast('👍 ¡Agregado a tus matches!')
+      } else {
+        showToast('Eliminado de matches.')
       }
     } catch {}
+    setLikeLoading(false)
+  }, [current, liked, likeLoading, token, onSwipeUpdate, onMatchFound, showToast])
 
-    setTimeout(() => {
-      setIdx(prev => prev + 1)
-      setIsSwiping(false)
-    }, 420)
-  }, [isSwiping, current, token, showToast, onMatchFound, onSwipeUpdate])
+  // swipeRef compatibility for PsychDetailModal
+  const doSwipe = useCallback((dir) => {
+    if (dir === 'right') handleLike()
+    else goNext()
+  }, [handleLike, goNext])
 
   useEffect(() => { swipeRef?.(doSwipe) }, [doSwipe, swipeRef])
 
-  const handleDragStart = useCallback((e) => {
-    if (isSwiping) return
-    e.preventDefault()
-    drag.current.active = true
-    drag.current.startX = e.touches ? e.touches[0].clientX : e.clientX
-    drag.current.currentX = 0
-    if (topCardRef.current) topCardRef.current.style.transition = 'none'
-  }, [isSwiping])
+  // Touch swipe to navigate
+  const onTouchStart = (e) => {
+    touch.current.startX = e.touches[0].clientX
+    touch.current.startY = e.touches[0].clientY
+  }
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touch.current.startX
+    const dy = Math.abs(e.changedTouches[0].clientY - touch.current.startY)
+    if (dy > 40) return // vertical scroll, ignore
+    if (dx > 60) goPrev()
+    else if (dx < -60) goNext()
+  }
 
-  useEffect(() => {
-    function onMove(e) {
-      if (!drag.current.active || !topCardRef.current) return
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX
-      const dx = clientX - drag.current.startX
-      drag.current.currentX = dx
-      const card = topCardRef.current
-      card.style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`
-      const likeEl = card.querySelector('.overlay-like')
-      const nopeEl = card.querySelector('.overlay-nope')
-      if (likeEl) likeEl.style.opacity = dx > 50 ? Math.min((dx - 50) / 80, 1) : 0
-      if (nopeEl) nopeEl.style.opacity = dx < -50 ? Math.min((-dx - 50) / 80, 1) : 0
-    }
-
-    function onEnd() {
-      if (!drag.current.active) return
-      drag.current.active = false
-      const dx = drag.current.currentX
-      if (dx > 100) doSwipe('right')
-      else if (dx < -100) doSwipe('left')
-      else if (topCardRef.current) {
-        const card = topCardRef.current
-        card.style.transition = 'transform 0.4s ease'
-        card.style.transform = ''
-        card.querySelectorAll('.overlay-like, .overlay-nope').forEach(el => { el.style.opacity = 0 })
-      }
-    }
-
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onEnd)
-    document.addEventListener('touchmove', onMove, { passive: false })
-    document.addEventListener('touchend', onEnd)
-    return () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onEnd)
-      document.removeEventListener('touchmove', onMove)
-      document.removeEventListener('touchend', onEnd)
-    }
-  }, [doSwipe])
-
-  const goBack = () => {
-    if (idx > 0 && !isSwiping) setIdx(prev => prev - 1)
+  if (psychs.length === 0) {
+    return (
+      <div className="w-full max-w-[440px] h-[520px] flex flex-col items-center justify-center gap-4 text-warm-mid text-center px-6">
+        <div className="text-5xl">🌿</div>
+        <div className="font-medium">No hay psicólogos disponibles.</div>
+        <div className="text-sm">Probá ajustar los filtros.</div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:gap-7 w-full px-3 sm:px-0">
-      {psychs.length > 0 && (
-        <div className="text-xs text-warm-mid">
-          {done ? `${psychs.length} de ${psychs.length}` : `${idx + 1} de ${psychs.length}`}
-        </div>
-      )}
-
-      {done ? (
-        <div className="w-full max-w-[360px] h-[460px] sm:h-[520px] flex flex-col items-center justify-center gap-4 text-warm-mid text-center px-6">
-          <div className="text-5xl">🌿</div>
-          <div className="font-medium">¡Ya los viste todos!</div>
-          <div className="text-sm">Podés volver a explorar desde el principio.</div>
-          <button
-            onClick={() => setIdx(0)}
-            className="mt-2 px-6 py-2.5 rounded-xl bg-sage-dark text-white text-sm font-medium hover:bg-sage transition-all"
-          >
-            Ver de nuevo →
-          </button>
-        </div>
-      ) : (
-        <div className="relative w-full max-w-[360px] h-[460px] sm:h-[520px]">
-          {[...visible].reverse().map((psych, ri) => {
-            const visibleCount = visible.length
-            const stackIndex = visibleCount - 1 - ri
-            const isTop = ri === visibleCount - 1
-            return (
-              <PsychCard
-                key={psych.id}
-                psych={psych}
-                stackIndex={stackIndex}
-                isTop={isTop}
-                topCardRef={isTop ? topCardRef : null}
-                onDragStart={handleDragStart}
-              />
-            )
-          })}
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 sm:gap-4">
-        <button
-          onClick={goBack}
-          disabled={idx === 0 || isSwiping}
-          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-card flex items-center justify-center text-base sm:text-lg hover:bg-amber-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Volver"
-        >↩</button>
-        <button
-          onClick={() => doSwipe('left')}
-          disabled={done || isSwiping}
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white shadow-card flex items-center justify-center text-xl sm:text-2xl hover:bg-red-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Pasar"
-        >✕</button>
-        <button
-          onClick={() => doSwipe('right')}
-          disabled={done || isSwiping}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-sage-dark flex items-center justify-center text-2xl sm:text-3xl hover:bg-sage hover:scale-110 transition-all shadow-card disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Me interesa"
-        >♥</button>
-        <button
-          onClick={() => current && onInfo?.(current)}
-          disabled={done}
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white shadow-card flex items-center justify-center text-xl sm:text-2xl hover:bg-blue-50 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Ver perfil"
-        >ℹ</button>
+    <div className="flex flex-col items-center gap-5 w-full px-1 sm:px-0" style={{ maxWidth: 440 }}>
+      {/* Counter */}
+      <div className="text-xs text-warm-mid self-end">
+        {displayIdx + 1} <span className="text-warm-dark/30">/</span> {psychs.length}
       </div>
 
-      <div className="text-xs text-warm-mid">← Pasar &nbsp;|&nbsp; ♥ Me interesa →</div>
+      {/* Card */}
+      <div
+        className="w-full"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        {current && (
+          <PsychCard
+            key={current.id}
+            psych={current}
+            opacity={cardOpacity}
+            dragRef={cardRef}
+          />
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-3 w-full">
+        {/* Prev */}
+        <button
+          onClick={goPrev}
+          disabled={idx === 0}
+          className="w-11 h-11 rounded-full bg-white shadow-card flex items-center justify-center text-warm-dark hover:bg-warm-dark/[0.06] transition-all disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0"
+          title="Anterior"
+        >
+          ‹
+        </button>
+
+        {/* Info */}
+        <button
+          onClick={() => current && onInfo?.(current)}
+          className="w-11 h-11 rounded-full bg-white shadow-card flex items-center justify-center text-warm-mid hover:text-warm-dark hover:bg-warm-dark/[0.06] transition-all flex-shrink-0 text-sm"
+          title="Ver perfil completo"
+        >
+          ℹ
+        </button>
+
+        {/* Heart — primary CTA */}
+        <button
+          onClick={handleLike}
+          disabled={likeLoading}
+          className={`flex-1 h-11 rounded-full flex items-center justify-center gap-2 text-sm font-medium transition-all shadow-card disabled:opacity-60 ${
+            liked
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-warm-dark text-cream hover:bg-sage-dark'
+          }`}
+        >
+          <span className="text-base">{liked ? '♥' : '♡'}</span>
+          {liked ? 'Elegido' : 'Me interesa'}
+        </button>
+
+        {/* Next */}
+        <button
+          onClick={goNext}
+          disabled={idx === psychs.length - 1}
+          className="w-11 h-11 rounded-full bg-white shadow-card flex items-center justify-center text-warm-dark hover:bg-warm-dark/[0.06] transition-all disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0"
+          title="Siguiente"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Dots */}
+      <Dots total={psychs.length} current={displayIdx} onSelect={navigateTo} />
     </div>
   )
 }
