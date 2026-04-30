@@ -30,7 +30,7 @@ export default function FilterSidebar({ onApply }) {
     <aside className="p-8 border-r border-warm-dark/[0.08] flex flex-col gap-5">
       <div>
         <h2 className="font-serif text-xl font-bold">Filtros</h2>
-        <p className="text-xs text-warm-mid mt-1">Encontrá tu match ideal</p>
+        <p className="text-xs text-warm-mid mt-1">Encontrá tus favoritos ideales</p>
       </div>
 
       <div className="flex flex-col gap-2">

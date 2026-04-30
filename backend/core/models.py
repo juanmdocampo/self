@@ -64,9 +64,9 @@ class SwipeAction(models.Model):
         return f'{self.patient.username} → {self.psychologist.username}: {self.action}'
 
 
-class Match(models.Model):
-    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches_as_patient')
-    psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches_as_psychologist')
+class Favorite(models.Model):
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites_as_patient')
+    psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites_as_psychologist')
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
@@ -74,4 +74,4 @@ class Match(models.Model):
         unique_together = ('patient', 'psychologist')
 
     def __str__(self):
-        return f'Match: {self.patient.username} ↔ {self.psychologist.username}'
+        return f'Favorite: {self.patient.username} ↔ {self.psychologist.username}'

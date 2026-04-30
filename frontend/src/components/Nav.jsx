@@ -25,7 +25,7 @@ export default function Nav() {
     { path: '/', label: 'Inicio', show: true },
     { path: '/discover', label: 'Descubrir', show: true },
     { path: '/recommend', label: 'Me recomiendan', show: true },
-    { path: '/matches', label: 'Mis matches', show: !!currentUser && currentUser.role === 'patient' },
+    { path: '/favorites', label: 'Mis favoritos', show: !!currentUser && currentUser.role === 'patient' },
     { path: '/register', label: 'Registrarse', show: !currentUser },
   ].filter(t => t.show)
 

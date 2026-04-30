@@ -104,7 +104,7 @@ function PsychCard({ psych, opacity, dragRef }) {
   )
 }
 
-export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo, swipeRef }) {
+export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onInfo, swipeRef }) {
   const { token } = useAuth()
   const { showToast } = useToast()
   const [idx, setIdx] = useState(0)
@@ -138,14 +138,14 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo
       await swipeAction(token, current.id, newAction)
       onSwipeUpdate?.(current.id, newAction)
       if (newAction === 'like') {
-        showToast('💚 ¡Agregado a tus matches!')
-        onMatchFound?.()
+        showToast('💚 ¡Agregado a tus favoritos!')
+        onFavoriteFound?.()
       } else {
-        showToast('Eliminado de matches.')
+        showToast('Eliminado de favoritos.')
       }
     } catch {}
     setLikeLoading(false)
-  }, [current, liked, likeLoading, token, onSwipeUpdate, onMatchFound, showToast])
+  }, [current, liked, likeLoading, token, onSwipeUpdate, onFavoriteFound, showToast])
 
   // swipeRef compatibility for PsychDetailModal
   const doSwipe = useCallback((dir) => {

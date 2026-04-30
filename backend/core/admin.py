@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Match, PsychologistProfile, SwipeAction, User
+from .models import Favorite, PsychologistProfile, SwipeAction, User
 
 
 @admin.register(User)
@@ -25,7 +25,7 @@ class SwipeActionAdmin(admin.ModelAdmin):
     list_filter = ['action']
 
 
-@admin.register(Match)
-class MatchAdmin(admin.ModelAdmin):
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
     list_display = ['patient', 'psychologist', 'created_at', 'is_active']
     list_filter = ['is_active']

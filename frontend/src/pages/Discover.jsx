@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import FilterSidebar from '../components/FilterSidebar'
 import SwipeStack from '../components/SwipeStack'
-import MatchesPanel from '../components/MatchesPanel'
+import FavoritesPanel from '../components/MatchesPanel'
 import PsychDetailModal from '../components/PsychDetailModal'
-import { fetchPsychologists, fetchMatches } from '../api'
+import { fetchPsychologists, fetchFavorites } from '../api'
 
 export default function Discover() {
   const { token } = useAuth()
   const [psychs, setPsychs] = useState([])
-  const [matches, setMatches] = useState([])
+  const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedPsych, setSelectedPsych] = useState(null)
@@ -28,17 +28,17 @@ export default function Discover() {
     }
   }, [token])
 
-  const loadMatches = useCallback(async () => {
+  const loadFavorites = useCallback(async () => {
     if (!token) return
-    setMatches(await fetchMatches(token))
+    setFavorites(await fetchFavorites(token))
   }, [token])
 
-  useEffect(() => { load(); loadMatches() }, [load, loadMatches])
+  useEffect(() => { load(); loadFavorites() }, [load, loadFavorites])
 
   const handleSwipeUpdate = useCallback((psychId, action) => {
     setPsychs(prev => prev.map(p => p.id === psychId ? { ...p, swipe_status: action } : p))
-    if (action === 'like') loadMatches()
-  }, [loadMatches])
+    if (action === 'like') loadFavorites()
+  }, [loadFavorites])
 
   const handleApplyFilters = (filters) => {
     load(filters)
@@ -107,7 +107,7 @@ export default function Discover() {
             <SwipeStack
               psychs={psychs}
               onSwipeUpdate={handleSwipeUpdate}
-              onMatchFound={loadMatches}
+              onFavoriteFound={loadFavorites}
               onInfo={psych => setSelectedPsych(psych)}
               swipeRef={fn => { swipeDoRef.current = fn }}
             />
@@ -116,7 +116,7 @@ export default function Discover() {
 
         {/* Right sidebar — desktop only */}
         <div className="hidden lg:block">
-          <MatchesPanel matches={matches} />
+          <FavoritesPanel favorites={favorites} />
         </div>
       </div>
 

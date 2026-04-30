@@ -92,18 +92,18 @@ export async function swipeAction(token, psychologistId, action) {
   return res.json()
 }
 
-export async function fetchMatches(token) {
-  const res = await fetch(`${BASE}/matches/`, { headers: authHeaders(token) })
+export async function fetchFavorites(token) {
+  const res = await fetch(`${BASE}/favorites/`, { headers: authHeaders(token) })
   if (!res.ok) return []
   return res.json()
 }
 
-export async function deleteMatch(token, matchId) {
-  const res = await fetch(`${BASE}/matches/${matchId}/`, {
+export async function deleteFavorite(token, favoriteId) {
+  const res = await fetch(`${BASE}/favorites/${favoriteId}/`, {
     method: 'DELETE',
     headers: authHeaders(token),
   })
-  if (!res.ok) throw new Error('Error al eliminar match.')
+  if (!res.ok) throw new Error('Error al eliminar favorito.')
 }
 
 export async function submitRecommendation(body) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchMatches, deleteMatch } from '../api'
+import { fetchFavorites, deleteFavorite } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
@@ -15,8 +15,8 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
-function MatchCard({ match, isPatient, onRemove, removing }) {
-  const person = isPatient ? match.psychologist : match.patient
+function FavoriteCard({ favorite, isPatient, onRemove, removing }) {
+  const person = isPatient ? favorite.psychologist : favorite.patient
   const name = [person.first_name, person.last_name].filter(Boolean).join(' ') || person.username
   const p = person.psychologist_profile || {}
   const specialties = (p.specialties || []).slice(0, 2).join(', ') || null
@@ -39,7 +39,7 @@ function MatchCard({ match, isPatient, onRemove, removing }) {
             <div className="font-medium text-warm-dark">{name}</div>
             {specialties && <div className="text-xs text-sage-dark mt-0.5">{specialties}</div>}
           </div>
-          <div className="text-xs text-warm-mid flex-shrink-0">{formatDate(match.created_at)}</div>
+          <div className="text-xs text-warm-mid flex-shrink-0">{formatDate(favorite.created_at)}</div>
         </div>
 
         {isPatient && (
@@ -56,7 +56,7 @@ function MatchCard({ match, isPatient, onRemove, removing }) {
       </div>
 
       <button
-        onClick={() => onRemove(match.id)}
+        onClick={() => onRemove(favorite.id)}
         disabled={removing}
         className="flex-shrink-0 text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40 mt-0.5"
         title="Quitar"
@@ -67,10 +67,10 @@ function MatchCard({ match, isPatient, onRemove, removing }) {
   )
 }
 
-export default function Matches() {
+export default function Favorites() {
   const { token, currentUser } = useAuth()
   const { showToast } = useToast()
-  const [matches, setMatches] = useState([])
+  const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
   const [removing, setRemoving] = useState(null)
 
@@ -80,7 +80,7 @@ export default function Matches() {
     if (!token) return
     setLoading(true)
     try {
-      setMatches(await fetchMatches(token))
+      setFavorites(await fetchFavorites(token))
     } finally {
       setLoading(false)
     }
@@ -88,12 +88,12 @@ export default function Matches() {
 
   useEffect(() => { load() }, [load])
 
-  const handleRemove = async (matchId) => {
-    setRemoving(matchId)
+  const handleRemove = async (favoriteId) => {
+    setRemoving(favoriteId)
     try {
-      await deleteMatch(token, matchId)
-      setMatches(prev => prev.filter(m => m.id !== matchId))
-      showToast('Match eliminado.')
+      await deleteFavorite(token, favoriteId)
+      setFavorites(prev => prev.filter(m => m.id !== favoriteId))
+      showToast('Favorito eliminado.')
     } catch {
       showToast('No se pudo eliminar. Intentá de nuevo.')
     } finally {
@@ -105,7 +105,7 @@ export default function Matches() {
     <div className="max-w-2xl mx-auto px-6 py-12">
       <div className="mb-8">
         <h1 className="font-serif text-4xl font-bold">
-          {isPatient ? 'Tus matches ✨' : 'Me recomiendan 💚'}
+          {isPatient ? 'Tus favoritos ✨' : 'Me recomiendan 💚'}
         </h1>
         <p className="text-warm-mid mt-2 text-sm">
           {isPatient
@@ -117,13 +117,13 @@ export default function Matches() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-warm-mid">
           <div className="text-4xl">⏳</div>
-          <div>Cargando...</div>
+          <div>Cargando favoritos...</div>
         </div>
-      ) : matches.length === 0 ? (
+      ) : favorites.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4 text-warm-mid text-center">
           <div className="text-5xl">{isPatient ? '🌿' : '💭'}</div>
           <div className="font-medium">
-            {isPatient ? 'Todavía no tenés matches.' : 'Nadie te eligió todavía.'}
+            {isPatient ? 'Todavía no tenés favoritos.' : 'Nadie te eligió todavía.'}
           </div>
           <div className="text-sm">
             {isPatient
@@ -133,13 +133,13 @@ export default function Matches() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {matches.map(match => (
-            <MatchCard
-              key={match.id}
-              match={match}
+          {favorites.map(favorite => (
+            <FavoriteCard
+              key={favorite.id}
+              favorite={favorite}
               isPatient={isPatient}
               onRemove={handleRemove}
-              removing={removing === match.id}
+              removing={removing === favorite.id}
             />
           ))}
         </div>
