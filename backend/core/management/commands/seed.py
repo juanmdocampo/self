@@ -18,6 +18,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español', 'Inglés'],
             'city': 'Buenos Aires',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -35,6 +36,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español'],
             'city': 'Buenos Aires',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -52,6 +54,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español', 'Portugués'],
             'city': 'Córdoba',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -69,6 +72,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español'],
             'city': 'Rosario',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -86,6 +90,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español', 'Inglés'],
             'city': 'Mendoza',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -103,6 +108,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español', 'Francés'],
             'city': 'Buenos Aires',
             'is_accepting_patients': False,
+            'verification_status': 'approved',
         },
     },
     {
@@ -120,6 +126,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español'],
             'city': 'La Plata',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
     {
@@ -137,6 +144,7 @@ PSYCHOLOGISTS = [
             'languages': ['Español', 'Inglés'],
             'city': 'Buenos Aires',
             'is_accepting_patients': True,
+            'verification_status': 'approved',
         },
     },
 ]
@@ -145,16 +153,24 @@ PATIENTS = [
     {'username': 'paciente_demo', 'first_name': 'Demo', 'last_name': 'Paciente', 'email': 'paciente@self-app.com'},
 ]
 
+ADMINS = [
+    {'username': 'admin_self', 'first_name': 'Admin', 'last_name': 'SELF', 'email': 'admin@self-app.com'},
+]
+
 
 class Command(BaseCommand):
-    help = 'Seed database with sample psychologists and a demo patient'
+    help = 'Seed database with sample psychologists, a demo patient, and an admin user'
 
     def add_arguments(self, parser):
         parser.add_argument('--clear', action='store_true', help='Delete existing seed users first')
 
     def handle(self, *args, **options):
         if options['clear']:
-            emails = [p['email'] for p in PSYCHOLOGISTS] + [p['email'] for p in PATIENTS]
+            emails = (
+                [p['email'] for p in PSYCHOLOGISTS]
+                + [p['email'] for p in PATIENTS]
+                + [p['email'] for p in ADMINS]
+            )
             deleted, _ = User.objects.filter(email__in=emails).delete()
             self.stdout.write(f'Deleted {deleted} existing seed users.')
 
@@ -186,7 +202,20 @@ class Command(BaseCommand):
                 created_patients += 1
                 self.stdout.write(f'  ✓ paciente: {user.username}')
 
+        created_admins = 0
+        for data in ADMINS:
+            user, created = User.objects.get_or_create(
+                username=data['username'],
+                defaults={**data, 'role': User.ROLE_ADMIN},
+            )
+            if created:
+                user.set_password('self1234')
+                user.save()
+                created_admins += 1
+                self.stdout.write(f'  ✓ admin: {user.username}')
+
         self.stdout.write(self.style.SUCCESS(
-            f'\nSeed completo: {created_psychs} psicólogos, {created_patients} pacientes creados.'
+            f'\nSeed completo: {created_psychs} psicólogos, {created_patients} pacientes, {created_admins} admins creados.'
         ))
         self.stdout.write('Contraseña de todos: self1234')
+        self.stdout.write('Admin: admin_self / self1234')

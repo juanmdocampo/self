@@ -5,9 +5,11 @@ from django.db import models
 class User(AbstractUser):
     ROLE_PATIENT = 'patient'
     ROLE_PSYCHOLOGIST = 'psychologist'
+    ROLE_ADMIN = 'admin'
     ROLE_CHOICES = [
         (ROLE_PATIENT, 'Paciente'),
         (ROLE_PSYCHOLOGIST, 'Psicólogo/a'),
+        (ROLE_ADMIN, 'Administrador'),
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_PATIENT)
@@ -29,6 +31,15 @@ class PsychologistProfile(models.Model):
         (MODALITY_BOTH, 'Ambas'),
     ]
 
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pendiente de revisión'),
+        (STATUS_APPROVED, 'Aprobado'),
+        (STATUS_REJECTED, 'Rechazado'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='psychologist_profile')
     specialties = models.JSONField(default=list)
     modality = models.CharField(max_length=20, choices=MODALITY_CHOICES, default=MODALITY_BOTH)
@@ -37,8 +48,14 @@ class PsychologistProfile(models.Model):
     license_number = models.CharField(max_length=50, blank=True)
     languages = models.JSONField(default=list)
     city = models.CharField(max_length=100, blank=True)
-    is_verified = models.BooleanField(default=False)
+    verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    rejection_reason = models.TextField(blank=True, default='')
+    document_upload = models.FileField(upload_to='documents/', blank=True, null=True)
     is_accepting_patients = models.BooleanField(default=True)
+
+    @property
+    def is_verified(self):
+        return self.verification_status == self.STATUS_APPROVED
 
     def __str__(self):
         return f'Perfil de {self.user.get_full_name() or self.user.username}'

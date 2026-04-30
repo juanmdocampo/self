@@ -14,9 +14,9 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(PsychologistProfile)
 class PsychologistProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'modality', 'session_price', 'years_experience', 'city', 'is_verified', 'is_accepting_patients']
-    list_filter = ['modality', 'is_verified', 'is_accepting_patients']
-    list_editable = ['is_verified', 'is_accepting_patients']
+    list_display = ['user', 'modality', 'session_price', 'years_experience', 'city', 'verification_status', 'is_accepting_patients']
+    list_filter = ['modality', 'verification_status', 'is_accepting_patients']
+    list_editable = ['verification_status', 'is_accepting_patients']
 
 
 @admin.register(SwipeAction)

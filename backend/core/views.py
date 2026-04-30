@@ -1,14 +1,20 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Favorite, SwipeAction, User
+from .models import Favorite, PsychologistProfile, SwipeAction, User
 from .serializers import (
-    LoginSerializer, FavoriteSerializer, RegisterSerializer,
-    SwipeSerializer, UpdateProfileSerializer, UserSerializer,
+    AdminUserSerializer, FavoriteSerializer, LoginSerializer,
+    RegisterSerializer, SwipeSerializer, UpdateProfileSerializer,
+    UserSerializer, VerifySerializer,
 )
+
+
+class IsAdminRole(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == User.ROLE_ADMIN
 
 
 def _jwt_response(user, http_status=status.HTTP_200_OK):
@@ -57,7 +63,10 @@ def me(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def psychologists_list(request):
-    qs = User.objects.filter(role=User.ROLE_PSYCHOLOGIST).select_related('psychologist_profile')
+    qs = User.objects.filter(
+        role=User.ROLE_PSYCHOLOGIST,
+        psychologist_profile__verification_status=PsychologistProfile.STATUS_APPROVED,
+    ).select_related('psychologist_profile')
 
     specialty = request.query_params.get('specialty')
     modality = request.query_params.get('modality')
@@ -135,3 +144,46 @@ def delete_favorite(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Favorite.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+# ── Admin endpoints ───────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAdminRole])
+def admin_psychologists(request):
+    status_filter = request.query_params.get('status', PsychologistProfile.STATUS_PENDING)
+    qs = User.objects.filter(
+        role=User.ROLE_PSYCHOLOGIST,
+        psychologist_profile__verification_status=status_filter,
+    ).select_related('psychologist_profile').order_by('-created_at')
+    return Response(AdminUserSerializer(qs, many=True).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminRole])
+def admin_verify(request, pk):
+    serializer = VerifySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        profile = PsychologistProfile.objects.select_related('user').get(user_id=pk)
+    except PsychologistProfile.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    profile.verification_status = serializer.validated_data['action']
+    profile.rejection_reason = serializer.validated_data.get('rejection_reason', '')
+    profile.save()
+    return Response(AdminUserSerializer(profile.user).data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminRole])
+def admin_stats(request):
+    return Response({
+        'total_patients': User.objects.filter(role=User.ROLE_PATIENT).count(),
+        'total_psychologists': User.objects.filter(role=User.ROLE_PSYCHOLOGIST).count(),
+        'pending_review': PsychologistProfile.objects.filter(verification_status=PsychologistProfile.STATUS_PENDING).count(),
+        'approved': PsychologistProfile.objects.filter(verification_status=PsychologistProfile.STATUS_APPROVED).count(),
+        'rejected': PsychologistProfile.objects.filter(verification_status=PsychologistProfile.STATUS_REJECTED).count(),
+        'total_favorites': Favorite.objects.filter(is_active=True).count(),
+    })

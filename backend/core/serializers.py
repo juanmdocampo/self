@@ -4,11 +4,34 @@ from .models import Favorite, PsychologistProfile, SwipeAction, User
 
 
 class PsychologistProfileSerializer(serializers.ModelSerializer):
+    is_verified = serializers.SerializerMethodField()
+
+    def get_is_verified(self, obj):
+        return obj.verification_status == PsychologistProfile.STATUS_APPROVED
+
     class Meta:
         model = PsychologistProfile
         fields = [
             'specialties', 'modality', 'session_price', 'years_experience',
-            'license_number', 'languages', 'city', 'is_verified', 'is_accepting_patients',
+            'license_number', 'languages', 'city',
+            'verification_status', 'rejection_reason',
+            'is_verified', 'is_accepting_patients',
+        ]
+
+
+class AdminPsychologistProfileSerializer(serializers.ModelSerializer):
+    is_verified = serializers.SerializerMethodField()
+
+    def get_is_verified(self, obj):
+        return obj.verification_status == PsychologistProfile.STATUS_APPROVED
+
+    class Meta:
+        model = PsychologistProfile
+        fields = [
+            'specialties', 'modality', 'session_price', 'years_experience',
+            'license_number', 'languages', 'city',
+            'verification_status', 'rejection_reason', 'document_upload',
+            'is_verified', 'is_accepting_patients',
         ]
 
 
@@ -18,6 +41,14 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'bio', 'avatar', 'psychologist_profile']
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    psychologist_profile = AdminPsychologistProfileSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'bio', 'avatar', 'created_at', 'psychologist_profile']
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -88,3 +119,16 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ['id', 'patient', 'psychologist', 'created_at', 'is_active']
+
+
+class VerifySerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=[
+        PsychologistProfile.STATUS_APPROVED,
+        PsychologistProfile.STATUS_REJECTED,
+    ])
+    rejection_reason = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        if data['action'] == PsychologistProfile.STATUS_REJECTED and not data.get('rejection_reason', '').strip():
+            raise serializers.ValidationError({'rejection_reason': 'Requerido al rechazar.'})
+        return data
