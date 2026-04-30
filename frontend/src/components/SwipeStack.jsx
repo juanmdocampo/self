@@ -49,7 +49,7 @@ function PsychCard({ psych, opacity, dragRef }) {
       style={{ opacity, transition: 'opacity 0.15s ease' }}
     >
       {/* Photo */}
-      <div className="w-full h-[240px] sm:h-[280px] bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center text-[5rem] relative">
+      <div className="w-full h-[240px] sm:h-[280px] bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[5rem] relative">
         {psych.avatar
           ? <img src={psych.avatar} alt={name} className="absolute inset-0 w-full h-full object-cover" />
           : avatar

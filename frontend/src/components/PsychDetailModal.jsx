@@ -18,7 +18,7 @@ export default function PsychDetailModal({ psych, index = 0, onClose, onSwipe })
       <div className="bg-card-bg rounded-3xl w-full max-w-lg shadow-modal overflow-hidden max-h-[90vh] flex flex-col">
 
         {/* Header image */}
-        <div className="relative h-52 bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center text-[5rem] flex-shrink-0">
+        <div className="relative h-52 bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[5rem] flex-shrink-0">
           {psych.avatar
             ? <img src={psych.avatar} alt={name} className="w-full h-full object-cover absolute inset-0" />
             : avatar

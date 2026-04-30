@@ -4,24 +4,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta extraída del logo SELF
-        cream:         '#EEDCCA',  // fondo principal
-        'card-bg':     '#E3CCB4',  // fondos secundarios / cards
-        'warm-border': '#D2BBA3',  // bordes y separadores
-        'warm-mid':    '#ACA093',  // texto secundario
-        'warm-dark':   '#34322E',  // texto principal / logo
-        // Acento (se mantiene para badges y tags)
-        sage:          '#8BAF8E',
-        'sage-dark':   '#5C7A5F',
+        cream:       '#F5F0E8',
+        sage:        '#8BAF8E',
+        'sage-dark': '#5C7A5F',
+        blush:       '#E8A598',
+        'warm-dark': '#2C2416',
+        'warm-mid':  '#6B5B47',
+        'card-bg':   '#FFFDF9',
+        // bordes — se mantiene para fases futuras
+        'warm-border': '#D2BBA3',
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'serif'],
         sans:  ['"DM Sans"', 'sans-serif'],
       },
       boxShadow: {
-        card:       '0 20px 60px rgba(52,50,46,0.10)',
-        'card-hover':'0 30px 80px rgba(52,50,46,0.15)',
-        modal:      '0 30px 80px rgba(52,50,46,0.18)',
+        card:        '0 20px 60px rgba(44,36,22,0.12)',
+        'card-hover':'0 30px 80px rgba(44,36,22,0.18)',
+        modal:       '0 30px 80px rgba(44,36,22,0.2)',
       },
     },
   },

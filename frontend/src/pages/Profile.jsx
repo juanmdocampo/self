@@ -2,16 +2,20 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchMe, updateProfile, uploadAvatar } from '../api'
+import { fetchMe, updateProfile, uploadAvatar, uploadDocument } from '../api'
 
-const SPECIALTIES = ['TCC', 'Psicoanálisis', 'Gestalt', 'Sistémica', 'ACT', 'Ansiedad', 'Depresión', 'Trauma', 'Pareja', 'Infancia', 'Duelo', 'EMDR', 'Otra']
+const SPECIALTIES = [
+  'TCC', 'Psicoanálisis', 'Gestalt', 'Sistémica', 'ACT',
+  'Ansiedad', 'Depresión', 'Trauma', 'Pareja', 'Infancia',
+  'Duelo', 'EMDR', 'Autoestima', 'Estrés laboral', 'Otra',
+]
 const MODALITIES = [
   { value: 'both', label: 'Online y Presencial' },
   { value: 'online', label: 'Solo Online' },
   { value: 'presential', label: 'Solo Presencial' },
 ]
 
-const inputCls = 'px-4 py-3 rounded-xl border-[1.5px] border-warm-dark/15 bg-white text-sm text-warm-dark outline-none focus:border-sage-dark transition-colors w-full'
+const inputCls = 'px-4 py-3 rounded-xl border-[1.5px] border-warm-border bg-card-bg text-sm text-warm-dark outline-none focus:border-warm-dark transition-colors w-full'
 
 function Field({ label, children }) {
   return (
@@ -22,24 +26,94 @@ function Field({ label, children }) {
   )
 }
 
+function VerificationBanner({ profile, onUpload, uploading }) {
+  const docRef = useRef()
+  const { verification_status, rejection_reason, document_upload } = profile
+
+  const config = {
+    pending: {
+      bg: 'bg-amber-50 border-amber-200',
+      text: 'text-amber-800',
+      icon: '⏳',
+      title: 'Cuenta pendiente de revisión',
+      body: 'Subí tu documentación profesional (matrícula o certificado) para que el equipo SELF pueda verificar tu cuenta. Una vez aprobada, tu perfil aparecerá en el buscador.',
+    },
+    approved: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-800',
+      icon: '✓',
+      title: 'Cuenta verificada',
+      body: 'Tu perfil está activo y visible para los pacientes.',
+    },
+    rejected: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-800',
+      icon: '✕',
+      title: 'Verificación rechazada',
+      body: rejection_reason
+        ? `Motivo: ${rejection_reason}. Corregí la información y volvé a subir tu documentación.`
+        : 'Revisá tu información y volvé a subir tu documentación.',
+    },
+  }
+
+  const c = config[verification_status] || config.pending
+
+  return (
+    <div className={`${c.bg} border rounded-xl px-4 py-4 mb-6`}>
+      <div className="flex items-start gap-3">
+        <span className="text-lg leading-none mt-0.5">{c.icon}</span>
+        <div className="flex-1">
+          <p className={`text-sm font-medium ${c.text}`}>{c.title}</p>
+          <p className={`text-xs mt-0.5 leading-relaxed ${c.text} opacity-80`}>{c.body}</p>
+
+          {verification_status !== 'approved' && (
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => docRef.current.click()}
+                disabled={uploading}
+                className="px-4 py-2 rounded-full bg-warm-dark text-cream text-xs font-medium hover:opacity-90 transition-all disabled:opacity-60"
+              >
+                {uploading ? 'Subiendo...' : document_upload ? 'Reemplazar documento' : 'Subir documento'}
+              </button>
+              {document_upload && (
+                <span className="text-xs text-warm-mid">
+                  ✓ Documento subido
+                </span>
+              )}
+              <input
+                ref={docRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={e => e.target.files[0] && onUpload(e.target.files[0])}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AvatarSection({ user, onAvatarChange }) {
   const fileRef = useRef()
   const initials = [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || user.username?.[0]?.toUpperCase() || '?'
 
   return (
-    <div className="flex items-center gap-5 mb-8 pb-8 border-b border-warm-dark/[0.08]">
+    <div className="flex items-center gap-5 mb-8 pb-8 border-b border-warm-border/50">
       <div className="relative flex-shrink-0">
         {user.avatar
-          ? <img src={user.avatar} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-sage" />
+          ? <img src={user.avatar} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-warm-border" />
           : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center font-serif text-2xl font-bold text-warm-dark border-2 border-sage">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center font-serif text-2xl font-bold text-warm-dark border-2 border-warm-border">
               {initials}
             </div>
           )
         }
         <button
           onClick={() => fileRef.current.click()}
-          className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-sage-dark text-white text-xs flex items-center justify-center hover:bg-sage transition-all"
+          className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-warm-dark text-cream text-xs flex items-center justify-center hover:opacity-90 transition-all"
           title="Cambiar foto"
         >✎</button>
         <input
@@ -53,7 +127,7 @@ function AvatarSection({ user, onAvatarChange }) {
       <div>
         <div className="font-serif text-xl font-bold">{[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}</div>
         <div className="text-sm text-warm-mid mt-0.5">{user.role === 'psychologist' ? 'Psicólogo/a' : 'Paciente'}</div>
-        <div className="text-xs text-sage-dark mt-1">Hacé clic en el ícono para cambiar tu foto</div>
+        <div className="text-xs text-warm-mid/60 mt-1">Hacé clic en el ícono para cambiar tu foto</div>
       </div>
     </div>
   )
@@ -71,6 +145,7 @@ export default function Profile() {
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -82,6 +157,7 @@ export default function Profile() {
         last_name: data.last_name || '',
         email: data.email || '',
         bio: data.bio || '',
+        city: data.city || '',
       })
       if (data.psychologist_profile) {
         const p = data.psychologist_profile
@@ -102,6 +178,20 @@ export default function Profile() {
   function handleAvatarChange(file) {
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  async function handleDocumentUpload(file) {
+    setUploading(true)
+    try {
+      const updated = await uploadDocument(token, file)
+      setUser(updated)
+      updateUser(updated)
+      showToast('Documento subido correctamente ✓')
+    } catch {
+      showToast('Error al subir el documento. Intentá de nuevo.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   function toggleSpecialty(s) {
@@ -159,6 +249,15 @@ export default function Profile() {
       <h2 className="font-serif text-4xl font-bold mb-2">Mi perfil</h2>
       <p className="text-warm-mid mb-8">Editá tu información personal.</p>
 
+      {/* Verification banner — solo psicólogos */}
+      {user.role === 'psychologist' && user.psychologist_profile && (
+        <VerificationBanner
+          profile={user.psychologist_profile}
+          onUpload={handleDocumentUpload}
+          uploading={uploading}
+        />
+      )}
+
       <AvatarSection user={displayUser} onAvatarChange={handleAvatarChange} />
 
       <form onSubmit={handleSave} className="flex flex-col gap-5">
@@ -172,6 +271,9 @@ export default function Profile() {
           </Field>
           <Field label="Email">
             <input type="email" className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          </Field>
+          <Field label="Ciudad">
+            <input className={inputCls} placeholder="Ej: Buenos Aires" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
           </Field>
         </div>
 
@@ -187,8 +289,8 @@ export default function Profile() {
         {/* Psychologist-only fields */}
         {user.role === 'psychologist' && (
           <>
-            <div className="pt-4 border-t border-warm-dark/[0.08]">
-              <h3 className="font-medium text-warm-dark mb-3">Perfil profesional</h3>
+            <div className="pt-4 border-t border-warm-border/50">
+              <h3 className="font-medium text-warm-dark mb-4">Perfil profesional</h3>
             </div>
 
             <div>
@@ -202,7 +304,7 @@ export default function Profile() {
                     className={`px-3 py-1.5 rounded-full border-[1.5px] text-xs transition-all ${
                       psyForm.specialties?.includes(s)
                         ? 'bg-warm-dark text-cream border-warm-dark'
-                        : 'border-warm-dark/15 text-warm-mid hover:border-warm-dark hover:text-warm-dark'
+                        : 'border-warm-border text-warm-mid hover:border-warm-dark hover:text-warm-dark'
                     }`}
                   >{s}</button>
                 ))}
@@ -241,7 +343,7 @@ export default function Profile() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-4 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:bg-sage-dark transition-all disabled:opacity-60 mt-2"
+          className="w-full py-4 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60 mt-2"
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>

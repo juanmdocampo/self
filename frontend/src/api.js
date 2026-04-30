@@ -69,6 +69,19 @@ export async function uploadAvatar(token, file) {
   return json
 }
 
+export async function uploadDocument(token, file) {
+  const fd = new FormData()
+  fd.append('document_upload', file)
+  const res = await fetch(`${BASE}/auth/me/`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error('Error al subir documento.')
+  return json
+}
+
 export async function fetchPsychologists(token, filters = {}) {
   const params = new URLSearchParams()
   if (filters.specialty) params.set('specialty', filters.specialty)

@@ -40,7 +40,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'bio', 'avatar', 'psychologist_profile']
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email', 'role',
+            'bio', 'avatar', 'city', 'sought_specialties', 'psychologist_profile',
+        ]
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
@@ -48,7 +51,10 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'bio', 'avatar', 'created_at', 'psychologist_profile']
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email', 'role',
+            'bio', 'avatar', 'city', 'created_at', 'psychologist_profile',
+        ]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -57,7 +63,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'first_name', 'last_name', 'role', 'bio', 'psychologist_profile']
+        fields = [
+            'username', 'email', 'password', 'first_name', 'last_name',
+            'role', 'bio', 'city', 'sought_specialties', 'psychologist_profile',
+        ]
 
     def create(self, validated_data):
         profile_data = validated_data.pop('psychologist_profile', None)
@@ -92,7 +101,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'bio', 'psychologist_profile']
+        fields = ['first_name', 'last_name', 'email', 'bio', 'city', 'sought_specialties', 'psychologist_profile']
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('psychologist_profile', None)

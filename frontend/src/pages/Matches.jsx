@@ -26,7 +26,7 @@ function FavoriteCard({ favorite, isPatient, onRemove, removing }) {
 
   return (
     <div className="bg-card-bg rounded-2xl p-5 flex gap-4 items-start shadow-sm border border-warm-dark/[0.06]">
-      <div className="w-14 h-14 rounded-full flex-shrink-0 overflow-hidden border-2 border-sage bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center text-2xl">
+      <div className="w-14 h-14 rounded-full flex-shrink-0 overflow-hidden border-2 border-sage bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-2xl">
         {person.avatar
           ? <img src={person.avatar} alt={name} className="w-full h-full object-cover" />
           : AVATARS[person.id % AVATARS.length]

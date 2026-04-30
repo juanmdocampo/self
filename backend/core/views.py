@@ -54,6 +54,10 @@ def me(request):
         user.avatar = request.FILES['avatar']
         user.save()
 
+    if 'document_upload' in request.FILES and hasattr(user, 'psychologist_profile'):
+        user.psychologist_profile.document_upload = request.FILES['document_upload']
+        user.psychologist_profile.save()
+
     serializer = UpdateProfileSerializer(user, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
