@@ -60,7 +60,7 @@ function AvatarSection({ user, onAvatarChange }) {
 }
 
 export default function Profile() {
-  const { token, currentUser, login: setAuth } = useAuth()
+  const { token, updateUser } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
 
@@ -135,7 +135,7 @@ export default function Profile() {
       }
 
       setUser(updated)
-      setAuth(token, { ...currentUser, first_name: updated.first_name, last_name: updated.last_name, avatar: updated.avatar })
+      updateUser(updated)
       showToast('¡Perfil actualizado! ✓')
     } catch (err) {
       setError(err.message)

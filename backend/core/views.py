@@ -1,8 +1,8 @@
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Match, SwipeAction, User
 from .serializers import (
@@ -11,14 +11,22 @@ from .serializers import (
 )
 
 
+def _jwt_response(user, http_status=status.HTTP_200_OK):
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': UserSerializer(user).data,
+    }, status=http_status)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key, 'user': UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+    return _jwt_response(user, status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -26,9 +34,7 @@ def register(request):
 def login(request):
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    user = serializer.validated_data['user']
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key, 'user': UserSerializer(user).data})
+    return _jwt_response(serializer.validated_data['user'])
 
 
 @api_view(['GET', 'PATCH'])
@@ -51,8 +57,7 @@ def me(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def psychologists_list(request):
-    already_swiped = SwipeAction.objects.filter(patient=request.user).values_list('psychologist_id', flat=True)
-    qs = User.objects.filter(role=User.ROLE_PSYCHOLOGIST).exclude(id__in=already_swiped)
+    qs = User.objects.filter(role=User.ROLE_PSYCHOLOGIST).select_related('psychologist_profile')
 
     specialty = request.query_params.get('specialty')
     modality = request.query_params.get('modality')
@@ -65,7 +70,16 @@ def psychologists_list(request):
     if max_price:
         qs = qs.filter(psychologist_profile__session_price__lte=max_price)
 
-    return Response(UserSerializer(qs, many=True).data)
+    swipes = {}
+    if request.user.role == User.ROLE_PATIENT:
+        for s in SwipeAction.objects.filter(patient=request.user, psychologist__in=qs):
+            swipes[s.psychologist_id] = s.action
+
+    data = UserSerializer(qs, many=True).data
+    for item in data:
+        item['swipe_status'] = swipes.get(item['id'])
+
+    return Response(data)
 
 
 @api_view(['POST'])
@@ -89,6 +103,8 @@ def swipe(request):
             patient=request.user,
             psychologist_id=psychologist_id,
         )
+    else:
+        Match.objects.filter(patient=request.user, psychologist_id=psychologist_id).delete()
 
     return Response({'match': match_created})
 
@@ -97,7 +113,25 @@ def swipe(request):
 @permission_classes([IsAuthenticated])
 def my_matches(request):
     if request.user.role == User.ROLE_PATIENT:
-        matches = Match.objects.filter(patient=request.user, is_active=True)
+        matches = Match.objects.filter(patient=request.user, is_active=True).select_related(
+            'psychologist', 'psychologist__psychologist_profile'
+        )
     else:
-        matches = Match.objects.filter(psychologist=request.user, is_active=True)
+        matches = Match.objects.filter(psychologist=request.user, is_active=True).select_related(
+            'patient'
+        )
     return Response(MatchSerializer(matches, many=True).data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_match(request, pk):
+    try:
+        if request.user.role == User.ROLE_PATIENT:
+            match = Match.objects.get(pk=pk, patient=request.user)
+        else:
+            match = Match.objects.get(pk=pk, psychologist=request.user)
+        match.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except Match.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)

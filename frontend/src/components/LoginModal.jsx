@@ -22,7 +22,7 @@ export default function LoginModal() {
     setLoading(true)
     try {
       const data = await login(username, password)
-      setAuth(data.token, data.user)
+      setAuth(data.access, data.refresh, data.user)
       showToast(`Bienvenido/a, ${data.user.first_name || data.user.username}! 🌿`)
       setUsername(''); setPassword('')
       navigate('/discover')
