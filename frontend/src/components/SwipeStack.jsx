@@ -104,8 +104,8 @@ function PsychCard({ psych, opacity, dragRef }) {
   )
 }
 
-export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo, swipeRef }) {
-  const { token } = useAuth()
+export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onInfo, swipeRef }) {
+  const { token, openLoginModal } = useAuth()
   const { showToast } = useToast()
   const [idx, setIdx] = useState(0)
   const [displayIdx, setDisplayIdx] = useState(0)
@@ -113,6 +113,14 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo
   const [likeLoading, setLikeLoading] = useState(false)
   const cardRef = useRef(null)
   const touch = useRef({ startX: 0, startY: 0 })
+
+  const requireAuth = useCallback(() => {
+    if (!token) {
+      openLoginModal()
+      return false
+    }
+    return true
+  }, [token, openLoginModal])
 
   const current = psychs[displayIdx]
   const liked = current?.swipe_status === 'like'
@@ -127,25 +135,28 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onMatchFound, onInfo
     }, 130)
   }, [psychs.length])
 
-  const goNext = useCallback(() => navigateTo(Math.min(idx + 1, psychs.length - 1)), [idx, psychs.length, navigateTo])
+  const goNext = useCallback(() => {
+    navigateTo(Math.min(idx + 1, psychs.length - 1))
+  }, [idx, psychs.length, navigateTo])
   const goPrev = useCallback(() => navigateTo(Math.max(idx - 1, 0)), [idx, navigateTo])
 
   const handleLike = useCallback(async () => {
     if (!current || likeLoading) return
+    if (!requireAuth()) return
     const newAction = liked ? 'pass' : 'like'
     setLikeLoading(true)
     try {
       await swipeAction(token, current.id, newAction)
       onSwipeUpdate?.(current.id, newAction)
       if (newAction === 'like') {
-        showToast('💚 ¡Agregado a tus matches!')
-        onMatchFound?.()
+        showToast('💚 ¡Agregado a tus favoritos!')
+        onFavoriteFound?.()
       } else {
-        showToast('Eliminado de matches.')
+        showToast('Eliminado de favoritos.')
       }
     } catch {}
     setLikeLoading(false)
-  }, [current, liked, likeLoading, token, onSwipeUpdate, onMatchFound, showToast])
+  }, [current, liked, likeLoading, token, onSwipeUpdate, onFavoriteFound, showToast, requireAuth])
 
   // swipeRef compatibility for PsychDetailModal
   const doSwipe = useCallback((dir) => {

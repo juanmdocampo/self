@@ -8,7 +8,7 @@ import Discover from './pages/Discover'
 import Register from './pages/Register'
 import Recommend from './pages/Recommend'
 import Profile from './pages/Profile'
-import Matches from './pages/Matches'
+import Favorites from './pages/Matches'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth()
@@ -22,10 +22,10 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+        <Route path="/discover" element={<Discover />} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
-        <Route path="/recommend" element={<ProtectedRoute><Recommend /></ProtectedRoute>} />
+        <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+        <Route path="/recommend" element={<Recommend />} />
       </Routes>
       <LoginModal />
     </>

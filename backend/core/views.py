@@ -4,9 +4,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Match, SwipeAction, User
+from .models import Favorite, SwipeAction, User
 from .serializers import (
-    LoginSerializer, MatchSerializer, RegisterSerializer,
+    LoginSerializer, FavoriteSerializer, RegisterSerializer,
     SwipeSerializer, UpdateProfileSerializer, UserSerializer,
 )
 
@@ -55,7 +55,7 @@ def me(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def psychologists_list(request):
     qs = User.objects.filter(role=User.ROLE_PSYCHOLOGIST).select_related('psychologist_profile')
 
@@ -71,7 +71,7 @@ def psychologists_list(request):
         qs = qs.filter(psychologist_profile__session_price__lte=max_price)
 
     swipes = {}
-    if request.user.role == User.ROLE_PATIENT:
+    if request.user.is_authenticated and request.user.role == User.ROLE_PATIENT:
         for s in SwipeAction.objects.filter(patient=request.user, psychologist__in=qs):
             swipes[s.psychologist_id] = s.action
 
@@ -99,39 +99,39 @@ def swipe(request):
 
     match_created = False
     if action == SwipeAction.LIKE:
-        _, match_created = Match.objects.get_or_create(
+        _, match_created = Favorite.objects.get_or_create(
             patient=request.user,
             psychologist_id=psychologist_id,
         )
     else:
-        Match.objects.filter(patient=request.user, psychologist_id=psychologist_id).delete()
+        Favorite.objects.filter(patient=request.user, psychologist_id=psychologist_id).delete()
 
     return Response({'match': match_created})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def my_matches(request):
+def my_favorites(request):
     if request.user.role == User.ROLE_PATIENT:
-        matches = Match.objects.filter(patient=request.user, is_active=True).select_related(
+        favorites = Favorite.objects.filter(patient=request.user, is_active=True).select_related(
             'psychologist', 'psychologist__psychologist_profile'
         )
     else:
-        matches = Match.objects.filter(psychologist=request.user, is_active=True).select_related(
+        favorites = Favorite.objects.filter(psychologist=request.user, is_active=True).select_related(
             'patient'
         )
-    return Response(MatchSerializer(matches, many=True).data)
+    return Response(FavoriteSerializer(favorites, many=True).data)
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_match(request, pk):
+def delete_favorite(request, pk):
     try:
         if request.user.role == User.ROLE_PATIENT:
-            match = Match.objects.get(pk=pk, patient=request.user)
+            favorite = Favorite.objects.get(pk=pk, patient=request.user)
         else:
-            match = Match.objects.get(pk=pk, psychologist=request.user)
-        match.delete()
+            favorite = Favorite.objects.get(pk=pk, psychologist=request.user)
+        favorite.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    except Match.DoesNotExist:
+    except Favorite.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)

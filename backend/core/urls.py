@@ -9,6 +9,6 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view()),
     path('psychologists/', views.psychologists_list),
     path('swipe/', views.swipe),
-    path('matches/', views.my_matches),
-    path('matches/<int:pk>/', views.delete_match),
+    path('favorites/', views.my_favorites),
+    path('favorites/<int:pk>/', views.delete_favorite),
 ]

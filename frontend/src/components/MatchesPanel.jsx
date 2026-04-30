@@ -9,20 +9,20 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
-export default function MatchesPanel({ matches }) {
+export default function FavoritesPanel({ favorites }) {
   return (
     <aside className="p-8 border-l border-warm-dark/[0.08] flex flex-col gap-4 overflow-y-auto">
       <div>
-        <h2 className="font-serif text-xl font-bold">Tus matches ✨</h2>
+        <h2 className="font-serif text-xl font-bold">Tus favoritos ✨</h2>
         <p className="text-xs text-warm-mid mt-1">Psicólogos que elegiste</p>
       </div>
 
-      {matches.length === 0 ? (
+      {favorites.length === 0 ? (
         <p className="text-xs text-warm-mid py-2">
-          Todavía no tenés matches. ¡Empezá a explorar!
+          Todavía no tenés favoritos. ¡Empezá a explorar!
         </p>
       ) : (
-        matches.map((m, i) => {
+        favorites.map((m, i) => {
           const psy = m.psychologist
           const name = [psy.first_name, psy.last_name].filter(Boolean).join(' ') || psy.username
           const specs = (psy.psychologist_profile?.specialties || []).slice(0, 2).join(' · ') || 'Psicólogo/a'

@@ -49,7 +49,7 @@ export default function LoginModal() {
         </button>
 
         <h3 className="font-serif text-3xl font-bold mb-1.5">Bienvenido/a</h3>
-        <p className="text-warm-mid text-sm mb-7">Iniciá sesión para explorar psicólogos y guardar tus matches.</p>
+        <p className="text-warm-mid text-sm mb-7">Iniciá sesión para explorar psicólogos y guardar tus favoritos.</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

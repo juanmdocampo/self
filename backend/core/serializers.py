@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import Match, PsychologistProfile, SwipeAction, User
+from .models import Favorite, PsychologistProfile, SwipeAction, User
 
 
 class PsychologistProfileSerializer(serializers.ModelSerializer):
@@ -81,10 +81,10 @@ class SwipeSerializer(serializers.ModelSerializer):
         fields = ['psychologist', 'action']
 
 
-class MatchSerializer(serializers.ModelSerializer):
+class FavoriteSerializer(serializers.ModelSerializer):
     psychologist = UserSerializer(read_only=True)
     patient = UserSerializer(read_only=True)
 
     class Meta:
-        model = Match
+        model = Favorite
         fields = ['id', 'patient', 'psychologist', 'created_at', 'is_active']
