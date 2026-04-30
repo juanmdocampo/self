@@ -105,7 +105,7 @@ function PsychCard({ psych, opacity, dragRef }) {
 }
 
 export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onInfo, swipeRef }) {
-  const { token } = useAuth()
+  const { token, openLoginModal } = useAuth()
   const { showToast } = useToast()
   const [idx, setIdx] = useState(0)
   const [displayIdx, setDisplayIdx] = useState(0)
@@ -113,6 +113,14 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
   const [likeLoading, setLikeLoading] = useState(false)
   const cardRef = useRef(null)
   const touch = useRef({ startX: 0, startY: 0 })
+
+  const requireAuth = useCallback(() => {
+    if (!token) {
+      openLoginModal()
+      return false
+    }
+    return true
+  }, [token, openLoginModal])
 
   const current = psychs[displayIdx]
   const liked = current?.swipe_status === 'like'
@@ -127,11 +135,14 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
     }, 130)
   }, [psychs.length])
 
-  const goNext = useCallback(() => navigateTo(Math.min(idx + 1, psychs.length - 1)), [idx, psychs.length, navigateTo])
+  const goNext = useCallback(() => {
+    navigateTo(Math.min(idx + 1, psychs.length - 1))
+  }, [idx, psychs.length, navigateTo])
   const goPrev = useCallback(() => navigateTo(Math.max(idx - 1, 0)), [idx, navigateTo])
 
   const handleLike = useCallback(async () => {
     if (!current || likeLoading) return
+    if (!requireAuth()) return
     const newAction = liked ? 'pass' : 'like'
     setLikeLoading(true)
     try {
@@ -145,7 +156,7 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
       }
     } catch {}
     setLikeLoading(false)
-  }, [current, liked, likeLoading, token, onSwipeUpdate, onFavoriteFound, showToast])
+  }, [current, liked, likeLoading, token, onSwipeUpdate, onFavoriteFound, showToast, requireAuth])
 
   // swipeRef compatibility for PsychDetailModal
   const doSwipe = useCallback((dir) => {

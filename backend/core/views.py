@@ -55,7 +55,7 @@ def me(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def psychologists_list(request):
     qs = User.objects.filter(role=User.ROLE_PSYCHOLOGIST).select_related('psychologist_profile')
 
@@ -71,7 +71,7 @@ def psychologists_list(request):
         qs = qs.filter(psychologist_profile__session_price__lte=max_price)
 
     swipes = {}
-    if request.user.role == User.ROLE_PATIENT:
+    if request.user.is_authenticated and request.user.role == User.ROLE_PATIENT:
         for s in SwipeAction.objects.filter(patient=request.user, psychologist__in=qs):
             swipes[s.psychologist_id] = s.action
 

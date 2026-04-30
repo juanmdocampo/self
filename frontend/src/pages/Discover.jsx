@@ -17,7 +17,6 @@ export default function Discover() {
   const swipeDoRef = useRef(null)
 
   const load = useCallback(async (filters = {}) => {
-    if (!token) return
     setLoading(true); setError('')
     try {
       setPsychs(await fetchPsychologists(token, filters))

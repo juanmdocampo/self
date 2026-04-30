@@ -25,7 +25,7 @@ export default function Nav() {
     { path: '/', label: 'Inicio', show: true },
     { path: '/discover', label: 'Descubrir', show: true },
     { path: '/recommend', label: 'Me recomiendan', show: true },
-    { path: '/favorites', label: 'Mis favoritos', show: !!currentUser && currentUser.role === 'patient' },
+    { path: '/favorites', label: 'Mis favoritos', show: !!currentUser && currentUser.role === 'patient', authRequired: true },
     { path: '/register', label: 'Registrarse', show: !currentUser },
   ].filter(t => t.show)
 
@@ -40,13 +40,25 @@ export default function Nav() {
         <div className="hidden md:flex gap-1.5">
           {tabs.map(tab => {
             const active = location.pathname === tab.path
-            return (
+            const tabClass = `px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              active ? 'bg-warm-dark text-cream' : 'text-warm-mid hover:bg-warm-dark/[0.06]'
+            }`
+            const requiresAuth = tab.authRequired && !currentUser
+
+            return requiresAuth ? (
+              <button
+                key={tab.label}
+                onClick={openLoginModal}
+                className={tabClass}
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ) : (
               <Link
                 key={tab.label}
                 to={tab.path}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  active ? 'bg-warm-dark text-cream' : 'text-warm-mid hover:bg-warm-dark/[0.06]'
-                }`}
+                className={tabClass}
               >
                 {tab.label}
               </Link>
@@ -126,14 +138,26 @@ export default function Nav() {
           <div className="flex flex-col px-5 pt-3 gap-1">
             {tabs.map(tab => {
               const active = location.pathname === tab.path
-              return (
+              const requiresAuth = tab.authRequired && !currentUser
+              const tabClass = `px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                active ? 'bg-warm-dark text-cream' : 'text-warm-dark hover:bg-warm-dark/[0.06]'
+              }`
+
+              return requiresAuth ? (
+                <button
+                  key={tab.label}
+                  type="button"
+                  onClick={() => { openLoginModal(); setMenuOpen(false) }}
+                  className={tabClass}
+                >
+                  {tab.label}
+                </button>
+              ) : (
                 <Link
                   key={tab.label}
                   to={tab.path}
                   onClick={() => setMenuOpen(false)}
-                  className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                    active ? 'bg-warm-dark text-cream' : 'text-warm-dark hover:bg-warm-dark/[0.06]'
-                  }`}
+                  className={tabClass}
                 >
                   {tab.label}
                 </Link>
