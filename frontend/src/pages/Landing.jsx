@@ -3,81 +3,116 @@ import { useAuth } from '../context/AuthContext'
 
 export default function Landing() {
   const navigate = useNavigate()
-  const { token, openLoginModal } = useAuth()
+  const { token, currentUser, openLoginModal } = useAuth()
 
-  function goDiscover() {
+  function handleLogin() {
     if (token) navigate('/discover')
     else openLoginModal()
   }
 
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-65px)]">
-      {/* Left */}
-      <div className="flex flex-col justify-center gap-6 sm:gap-7 px-6 sm:px-10 lg:px-16 py-12 sm:py-16 lg:py-20">
-        <div className="inline-flex items-center gap-2 bg-sage/15 border border-sage/40 px-3.5 py-1.5 rounded-full text-xs text-sage-dark font-medium w-fit">
-          ✦ Psicología · Bienestar · Conexión
+    <div>
+      {/* Hero */}
+      <div className="flex flex-col items-center justify-center text-center min-h-[calc(100vh-65px)] px-6 sm:px-10 py-16 gap-7">
+
+        {/* Logo + lema */}
+        <div>
+          <div className="font-serif text-5xl sm:text-6xl font-bold text-warm-dark tracking-tight">
+            Self<span className="text-sage-dark italic">.</span>
+          </div>
+          <p className="text-[11px] text-warm-mid tracking-[0.2em] uppercase mt-2 font-medium">
+            conecta · entiende · transforma
+          </p>
         </div>
 
-        <h1 className="font-serif text-[clamp(2.8rem,4vw,4rem)] leading-[1.1] font-bold">
-          Encontrá tu<br />
-          <em className="text-sage-dark">psicólogo ideal.</em>
+        <h1 className="font-serif text-[clamp(2.2rem,4vw,3.5rem)] leading-[1.1] font-bold max-w-xl">
+          Encuentra al<br />
+          <em className="text-sage-dark">psicólogo ideal para ti.</em>
         </h1>
 
-        <p className="text-warm-mid leading-relaxed max-w-md text-base">
-          Self conecta personas con profesionales de salud mental de forma simple,
-          humana e intuitiva. Como elegir un café favorito — pero para tu mente.
+        <p className="text-warm-mid leading-relaxed max-w-sm text-base">
+          Atención online y presencial con profesionales verificados.
         </p>
 
-        <div className="flex gap-3 flex-wrap">
+        {/* CTAs */}
+        <div className="flex flex-col items-center gap-3 w-full max-w-xs">
           <button
-            onClick={goDiscover}
-            className="px-8 py-3.5 rounded-full bg-warm-dark text-cream text-sm font-medium hover:bg-sage-dark hover:-translate-y-px transition-all"
+            onClick={handleLogin}
+            className="w-full px-8 py-3.5 rounded-full bg-warm-dark text-cream text-sm font-medium hover:bg-sage-dark hover:-translate-y-px transition-all"
           >
-            Explorar psicólogos →
+            {currentUser ? 'Explorar psicólogos →' : 'Iniciar sesión'}
           </button>
-          <button
-            onClick={() => navigate('/recommend')}
-            className="px-8 py-3.5 rounded-full border-[1.5px] border-warm-mid text-warm-mid text-sm font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
-          >
-            Quiero que me recomienden
-          </button>
-        </div>
-
-        <div className="flex gap-6 sm:gap-8 pt-2 flex-wrap">
-          {[
-            { num: '240+', label: 'Profesionales activos' },
-            { num: '1.2k', label: 'Conexiones realizadas' },
-            { num: '98%', label: 'Satisfacción' },
-          ].map(s => (
-            <div key={s.label}>
-              <div className="font-serif text-3xl font-bold">{s.num}</div>
-              <div className="text-xs text-warm-mid mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Right */}
-      <div className="hidden lg:flex bg-gradient-to-br from-[#D4E8D5] to-[#E8D4C8] items-center justify-center p-16 relative overflow-hidden">
-        <div className="absolute w-[400px] h-[400px] rounded-full bg-white/25 -top-24 -right-24" />
-        <div className="relative w-72 h-96">
-          <div className="absolute top-0 left-5 w-64 h-[360px] bg-white rounded-3xl shadow-card rotate-[-3deg]" />
-          <div className="absolute top-5 left-0 w-72 h-[370px] bg-card-bg rounded-3xl shadow-card overflow-hidden">
-            <div className="h-48 bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-[4.5rem]">
-              👩‍⚕️
-            </div>
-            <div className="p-5">
-              <div className="font-serif text-xl font-bold mb-1">Dra. Sofía M.</div>
-              <div className="text-xs text-sage-dark mb-2.5">Psicología Clínica · TCC</div>
-              <div className="flex gap-1.5 flex-wrap">
-                {['Ansiedad', 'Adultos', 'Online'].map(t => (
-                  <span key={t} className="bg-sage/12 px-2.5 py-1 rounded-full text-xs text-sage-dark">{t}</span>
-                ))}
-              </div>
-            </div>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => scrollTo('quienes-somos')}
+              className="flex-1 px-4 py-3 rounded-full border-[1.5px] border-warm-mid/40 text-warm-mid text-sm font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
+            >
+              Quiénes somos ↓
+            </button>
+            <button
+              onClick={() => scrollTo('como-funciona')}
+              className="flex-1 px-4 py-3 rounded-full border-[1.5px] border-warm-mid/40 text-warm-mid text-sm font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
+            >
+              Cómo funciona ↓
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Quiénes somos */}
+      <section id="quienes-somos" className="py-20 px-6 sm:px-10 lg:px-20 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-warm-dark">Quiénes somos</h2>
+          <p className="text-warm-mid text-lg leading-relaxed max-w-2xl mx-auto">
+            Self es una plataforma que conecta personas con profesionales de salud mental de forma simple,
+            humana e intuitiva. Creemos que encontrar el psicólogo indicado debería ser fácil y accesible para todos.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-14">
+            {[
+              { num: '240+', label: 'Profesionales activos' },
+              { num: '1.2k', label: 'Conexiones realizadas' },
+              { num: '98%', label: 'Satisfacción' },
+            ].map(s => (
+              <div key={s.label}>
+                <div className="font-serif text-4xl font-bold text-warm-dark">{s.num}</div>
+                <div className="text-sm text-warm-mid mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Cómo funciona */}
+      <section id="como-funciona" className="py-20 px-6 sm:px-10 lg:px-20 bg-card-bg">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-center text-warm-dark mb-14">Cómo funciona</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+            {[
+              { step: '01', title: 'Contanos sobre vos', desc: 'Respondé algunas preguntas simples sobre lo que estás buscando y tus preferencias.' },
+              { step: '02', title: 'Explorá perfiles', desc: 'Descubrí psicólogos verificados que se adaptan a tus necesidades, de forma visual y simple.' },
+              { step: '03', title: 'Conectá', desc: 'Elegí el profesional que más te resuene y comenzá tu proceso con un clic.' },
+            ].map(item => (
+              <div key={item.step} className="flex flex-col gap-3">
+                <div className="font-serif text-5xl font-bold text-sage-dark/20">{item.step}</div>
+                <h3 className="font-serif text-xl font-bold text-warm-dark">{item.title}</h3>
+                <p className="text-warm-mid text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-14">
+            <button
+              onClick={handleLogin}
+              className="px-10 py-4 rounded-full bg-warm-dark text-cream text-sm font-medium hover:bg-sage-dark hover:-translate-y-px transition-all"
+            >
+              Comenzar ahora →
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
