@@ -28,7 +28,7 @@ export default function FavoritesPanel({ favorites }) {
           const specs = (psy.psychologist_profile?.specialties || []).slice(0, 2).join(' · ') || 'Psicólogo/a'
           return (
             <div key={m.id} className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer hover:bg-warm-dark/[0.04] transition-colors">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-xl flex-shrink-0 border-2 border-sage">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center text-xl flex-shrink-0 border-2 border-sage">
                 {AVATARS[i % AVATARS.length]}
               </div>
               <div className="min-w-0">

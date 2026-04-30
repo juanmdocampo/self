@@ -32,7 +32,7 @@ function AvatarSection({ user, onAvatarChange }) {
         {user.avatar
           ? <img src={user.avatar} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-sage" />
           : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center font-serif text-2xl font-bold text-warm-dark border-2 border-sage">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-warm-border to-[#C8A98A] flex items-center justify-center font-serif text-2xl font-bold text-warm-dark border-2 border-sage">
               {initials}
             </div>
           )
