@@ -11,6 +11,7 @@ urlpatterns = [
 
     # Public
     path('psychologists/', views.psychologists_list),
+    path('psychologists/<int:pk>/', views.psychologist_detail),
 
     # Patient
     path('swipe/', views.swipe),

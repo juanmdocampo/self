@@ -1,7 +1,10 @@
+import { useNavigate } from 'react-router-dom'
+
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
 
 export default function PsychDetailModal({ psych, index = 0, onClose, onSwipe }) {
+  const navigate = useNavigate()
   if (!psych) return null
 
   const p = psych.psychologist_profile || {}
@@ -93,8 +96,15 @@ export default function PsychDetailModal({ psych, index = 0, onClose, onSwipe })
 
           {/* License */}
           {p.license_number && (
-            <div className="text-xs text-warm-mid">Matrícula: {p.license_number}</div>
+            <div className="text-xs text-warm-mid mb-4">Matrícula: {p.license_number}</div>
           )}
+
+          <button
+            onClick={() => { onClose(); navigate(`/psicologos/${psych.id}`) }}
+            className="w-full py-2.5 rounded-xl border-[1.5px] border-warm-dark/20 text-warm-mid text-xs font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
+          >
+            Ver perfil completo →
+          </button>
         </div>
 
         {/* Actions */}

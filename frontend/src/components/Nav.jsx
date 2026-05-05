@@ -32,7 +32,8 @@ export default function Nav() {
   return (
     <nav className="sticky top-0 z-50 bg-cream border-b border-warm-dark/[0.08]">
       <div className="flex items-center justify-between px-5 sm:px-10 py-4">
-        <Link to="/" className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-warm-dark">
+        <Link to="/" className="flex items-center gap-2 font-serif text-2xl sm:text-3xl font-bold tracking-tight text-warm-dark">
+          <img src="/favicon.svg" alt="" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
           Self<span className="text-sage-dark italic">.</span>
         </Link>
 

@@ -20,13 +20,16 @@ export default function Landing() {
       <div className="flex flex-col items-center justify-center text-center min-h-[calc(100vh-65px)] px-6 sm:px-10 py-16 gap-7">
 
         {/* Logo + lema */}
-        <div>
-          <div className="font-serif text-5xl sm:text-6xl font-bold text-warm-dark tracking-tight">
-            Self<span className="text-sage-dark italic">.</span>
+        <div className="flex flex-col items-center gap-3">
+          <img src="/favicon.svg" alt="SELF" className="w-14 h-14 sm:w-16 sm:h-16" />
+          <div>
+            <div className="font-serif text-5xl sm:text-6xl font-bold text-warm-dark tracking-tight">
+              Self<span className="text-sage-dark italic">.</span>
+            </div>
+            <p className="text-[11px] text-warm-mid tracking-[0.2em] uppercase mt-2 font-medium">
+              conecta · entiende · transforma
+            </p>
           </div>
-          <p className="text-[11px] text-warm-mid tracking-[0.2em] uppercase mt-2 font-medium">
-            conecta · entiende · transforma
-          </p>
         </div>
 
         <h1 className="font-serif text-[clamp(2.2rem,4vw,3.5rem)] leading-[1.1] font-bold max-w-xl">

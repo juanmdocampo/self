@@ -87,11 +87,20 @@ export async function fetchPsychologists(token, filters = {}) {
   if (filters.specialty) params.set('specialty', filters.specialty)
   if (filters.modality) params.set('modality', filters.modality)
   if (filters.maxPrice) params.set('max_price', filters.maxPrice)
+  if (filters.language) params.set('language', filters.language)
   const qs = params.toString()
   const res = await fetch(`${BASE}/psychologists/${qs ? '?' + qs : ''}`, {
     headers: authHeaders(token),
   })
   if (!res.ok) throw new Error('Error al cargar psicólogos.')
+  return res.json()
+}
+
+export async function fetchPsychologist(token, id) {
+  const res = await fetch(`${BASE}/psychologists/${id}/`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Psicólogo no encontrado.')
   return res.json()
 }
 

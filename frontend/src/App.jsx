@@ -9,6 +9,7 @@ import Register from './pages/Register'
 import Recommend from './pages/Recommend'
 import Profile from './pages/Profile'
 import Favorites from './pages/Matches'
+import PsychProfile from './pages/PsychProfile'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth()
@@ -26,6 +27,7 @@ function AppRoutes() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
         <Route path="/recommend" element={<Recommend />} />
+        <Route path="/psicologos/:id" element={<PsychProfile />} />
       </Routes>
       <LoginModal />
     </>

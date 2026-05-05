@@ -76,12 +76,16 @@ def psychologists_list(request):
     modality = request.query_params.get('modality')
     max_price = request.query_params.get('max_price')
 
+    language = request.query_params.get('language')
+
     if specialty:
         qs = qs.filter(psychologist_profile__specialties__icontains=specialty)
     if modality:
         qs = qs.filter(psychologist_profile__modality__in=[modality, 'both'])
     if max_price:
         qs = qs.filter(psychologist_profile__session_price__lte=max_price)
+    if language:
+        qs = qs.filter(psychologist_profile__languages__icontains=language)
 
     swipes = {}
     if request.user.is_authenticated and request.user.role == User.ROLE_PATIENT:
@@ -148,6 +152,20 @@ def delete_favorite(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Favorite.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def psychologist_detail(request, pk):
+    try:
+        user = User.objects.filter(
+            id=pk,
+            role=User.ROLE_PSYCHOLOGIST,
+            psychologist_profile__verification_status=PsychologistProfile.STATUS_APPROVED,
+        ).select_related('psychologist_profile').get()
+    except User.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(UserSerializer(user).data)
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
