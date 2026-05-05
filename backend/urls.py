@@ -12,6 +12,6 @@ urlpatterns = [
 # In production Django serves the React SPA for all non-API routes
 if not settings.DEBUG:
     urlpatterns += [
-        re_path(r'^(?!api/|admin/|media/|static/).*$',
+        re_path(r'^(?!api/|admin|media/|static/).*$',
                 TemplateView.as_view(template_name='index.html'))
     ]

@@ -113,6 +113,7 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
   const [likeLoading, setLikeLoading] = useState(false)
   const cardRef = useRef(null)
   const touch = useRef({ startX: 0, startY: 0 })
+  const swipedRef = useRef(false)
 
   const requireAuth = useCallback(() => {
     if (!token) {
@@ -170,13 +171,19 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
   const onTouchStart = (e) => {
     touch.current.startX = e.touches[0].clientX
     touch.current.startY = e.touches[0].clientY
+    swipedRef.current = false
   }
   const onTouchEnd = (e) => {
     const dx = e.changedTouches[0].clientX - touch.current.startX
     const dy = Math.abs(e.changedTouches[0].clientY - touch.current.startY)
-    if (dy > 40) return // vertical scroll, ignore
-    if (dx > 60) goPrev()
-    else if (dx < -60) goNext()
+    if (dy > 40) return
+    if (dx > 60) { swipedRef.current = true; goPrev() }
+    else if (dx < -60) { swipedRef.current = true; goNext() }
+  }
+
+  const handleCardClick = () => {
+    if (swipedRef.current) { swipedRef.current = false; return }
+    if (current) onInfo?.(current)
   }
 
   if (psychs.length === 0) {
@@ -198,9 +205,10 @@ export default function SwipeStack({ psychs, onSwipeUpdate, onFavoriteFound, onI
 
       {/* Card */}
       <div
-        className="w-full"
+        className="w-full cursor-pointer"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        onClick={handleCardClick}
       >
         {current && (
           <PsychCard
