@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchFavorites, deleteFavorite } from '../api'
+import { fetchFavorites, deleteFavorite, getOrCreateConversation } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
@@ -15,7 +16,7 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
-function FavoriteCard({ favorite, isPatient, onRemove, removing }) {
+function FavoriteCard({ favorite, isPatient, onRemove, removing, onChat, chatLoading }) {
   const person = isPatient ? favorite.psychologist : favorite.patient
   const name = [person.first_name, person.last_name].filter(Boolean).join(' ') || person.username
   const p = person.psychologist_profile || {}
@@ -55,14 +56,25 @@ function FavoriteCard({ favorite, isPatient, onRemove, removing }) {
         )}
       </div>
 
-      <button
-        onClick={() => onRemove(favorite.id)}
-        disabled={removing}
-        className="flex-shrink-0 text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40 mt-0.5"
-        title="Quitar"
-      >
-        ✕
-      </button>
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        {isPatient && (
+          <button
+            onClick={() => onChat(favorite.psychologist.id)}
+            disabled={chatLoading}
+            className="text-xs px-3 py-1.5 rounded-full bg-sage-dark text-white font-medium hover:bg-sage transition-all disabled:opacity-50"
+          >
+            Chatear
+          </button>
+        )}
+        <button
+          onClick={() => onRemove(favorite.id)}
+          disabled={removing}
+          className="text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40"
+          title="Quitar"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   )
 }
@@ -70,9 +82,11 @@ function FavoriteCard({ favorite, isPatient, onRemove, removing }) {
 export default function Favorites() {
   const { token, currentUser } = useAuth()
   const { showToast } = useToast()
+  const navigate = useNavigate()
   const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
   const [removing, setRemoving] = useState(null)
+  const [chatLoading, setChatLoading] = useState(false)
 
   const isPatient = currentUser?.role === 'patient'
 
@@ -87,6 +101,18 @@ export default function Favorites() {
   }, [token])
 
   useEffect(() => { load() }, [load])
+
+  const handleChat = async (psychologistId) => {
+    setChatLoading(true)
+    try {
+      const conv = await getOrCreateConversation(token, psychologistId)
+      navigate(`/chat?c=${conv.id}`)
+    } catch {
+      showToast('No se pudo abrir el chat. Intentá de nuevo.')
+    } finally {
+      setChatLoading(false)
+    }
+  }
 
   const handleRemove = async (favoriteId) => {
     setRemoving(favoriteId)
@@ -140,6 +166,8 @@ export default function Favorites() {
               isPatient={isPatient}
               onRemove={handleRemove}
               removing={removing === favorite.id}
+              onChat={handleChat}
+              chatLoading={chatLoading}
             />
           ))}
         </div>

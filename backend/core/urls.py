@@ -18,6 +18,10 @@ urlpatterns = [
     path('favorites/', views.my_favorites),
     path('favorites/<int:pk>/', views.delete_favorite),
 
+    # Chat
+    path('chat/', views.conversations),
+    path('chat/<int:pk>/messages/', views.conversation_messages),
+
     # Admin
     path('admin/psychologists/', views.admin_psychologists),
     path('admin/psychologists/<int:pk>/verify/', views.admin_verify),

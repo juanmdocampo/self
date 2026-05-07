@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import Favorite, PsychologistProfile, SwipeAction, User
+from .models import Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
 
 
 class PsychologistProfileSerializer(serializers.ModelSerializer):
@@ -128,6 +128,35 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ['id', 'patient', 'psychologist', 'created_at', 'is_active']
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_id = serializers.IntegerField(source='sender.id', read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'sender_id', 'text', 'created_at', 'is_read']
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    patient = UserSerializer(read_only=True)
+    psychologist = UserSerializer(read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+
+    def get_last_message(self, obj):
+        last = obj.messages.order_by('-created_at').first()
+        if not last:
+            return None
+        return {'text': last.text, 'created_at': last.created_at, 'sender_id': last.sender_id}
+
+    def get_unread_count(self, obj):
+        user = self.context.get('request').user
+        return obj.messages.filter(is_read=False).exclude(sender=user).count()
+
+    class Meta:
+        model = Conversation
+        fields = ['id', 'patient', 'psychologist', 'created_at', 'updated_at', 'last_message', 'unread_count']
 
 
 class VerifySerializer(serializers.Serializer):

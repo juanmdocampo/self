@@ -94,3 +94,27 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f'Favorite: {self.patient.username} ↔ {self.psychologist.username}'
+
+
+class Conversation(models.Model):
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations_as_patient')
+    psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations_as_psychologist')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('patient', 'psychologist')
+
+    def __str__(self):
+        return f'Chat: {self.patient.username} ↔ {self.psychologist.username}'
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Msg {self.id} from {self.sender.username}'

@@ -4,10 +4,10 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Favorite, PsychologistProfile, SwipeAction, User
+from .models import Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
 from .serializers import (
-    AdminUserSerializer, FavoriteSerializer, LoginSerializer,
-    RegisterSerializer, SwipeSerializer, UpdateProfileSerializer,
+    AdminUserSerializer, ConversationSerializer, FavoriteSerializer, LoginSerializer,
+    MessageSerializer, RegisterSerializer, SwipeSerializer, UpdateProfileSerializer,
     UserSerializer, VerifySerializer,
 )
 
@@ -166,6 +166,60 @@ def psychologist_detail(request, pk):
     except User.DoesNotExist:
         return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
     return Response(UserSerializer(user).data)
+
+
+# ── Chat endpoints ────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def conversations(request):
+    if request.method == 'GET':
+        if request.user.role == User.ROLE_PATIENT:
+            qs = Conversation.objects.filter(patient=request.user)
+        else:
+            qs = Conversation.objects.filter(psychologist=request.user)
+        qs = qs.select_related(
+            'patient', 'patient__psychologist_profile',
+            'psychologist', 'psychologist__psychologist_profile',
+        ).prefetch_related('messages').order_by('-updated_at')
+        return Response(ConversationSerializer(qs, many=True, context={'request': request}).data)
+
+    # POST — patient opens/creates a conversation
+    if request.user.role != User.ROLE_PATIENT:
+        return Response({'detail': 'Solo pacientes pueden iniciar conversaciones.'}, status=status.HTTP_403_FORBIDDEN)
+    psychologist_id = request.data.get('psychologist_id')
+    if not psychologist_id:
+        return Response({'detail': 'psychologist_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        psychologist = User.objects.get(id=psychologist_id, role=User.ROLE_PSYCHOLOGIST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Psicólogo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    conv, _ = Conversation.objects.get_or_create(patient=request.user, psychologist=psychologist)
+    return Response(ConversationSerializer(conv, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def conversation_messages(request, pk):
+    try:
+        if request.user.role == User.ROLE_PATIENT:
+            conv = Conversation.objects.get(pk=pk, patient=request.user)
+        else:
+            conv = Conversation.objects.get(pk=pk, psychologist=request.user)
+    except Conversation.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+        msgs = conv.messages.select_related('sender').order_by('created_at')
+        return Response(MessageSerializer(msgs, many=True).data)
+
+    text = request.data.get('text', '').strip()
+    if not text:
+        return Response({'detail': 'Mensaje vacío.'}, status=status.HTTP_400_BAD_REQUEST)
+    msg = Message.objects.create(conversation=conv, sender=request.user, text=text)
+    conv.save()  # touch updated_at
+    return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────

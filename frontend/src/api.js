@@ -128,6 +128,42 @@ export async function deleteFavorite(token, favoriteId) {
   if (!res.ok) throw new Error('Error al eliminar favorito.')
 }
 
+export async function fetchConversations(token) {
+  const res = await fetch(`${BASE}/chat/`, { headers: authHeaders(token) })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function getOrCreateConversation(token, psychologistId) {
+  const res = await fetch(`${BASE}/chat/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ psychologist_id: psychologistId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.detail || 'Error al abrir chat.')
+  return data
+}
+
+export async function fetchMessages(token, conversationId) {
+  const res = await fetch(`${BASE}/chat/${conversationId}/messages/`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function sendMessage(token, conversationId, text) {
+  const res = await fetch(`${BASE}/chat/${conversationId}/messages/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ text }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.detail || 'Error al enviar.')
+  return data
+}
+
 export async function submitRecommendation(body) {
   const res = await fetch(`${BASE}/recommendations/`, {
     method: 'POST',
