@@ -11,6 +11,7 @@ import Profile from './pages/Profile'
 import Favorites from './pages/Matches'
 import PsychProfile from './pages/PsychProfile'
 import Chat from './pages/Chat'
+import Calendar from './pages/Calendar'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth()
@@ -28,6 +29,7 @@ function AppRoutes() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
         <Route path="/recommend" element={<Recommend />} />
         <Route path="/psicologos/:id" element={<PsychProfile />} />
       </Routes>

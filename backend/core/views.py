@@ -4,9 +4,10 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
+from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
 from .serializers import (
-    AdminUserSerializer, ConversationSerializer, FavoriteSerializer, LoginSerializer,
+    AdminUserSerializer, AppointmentSerializer, AvailabilitySerializer,
+    ConversationSerializer, FavoriteSerializer, LoginSerializer,
     MessageSerializer, RegisterSerializer, SwipeSerializer, UpdateProfileSerializer,
     UserSerializer, VerifySerializer,
 )
@@ -220,6 +221,118 @@ def conversation_messages(request, pk):
     msg = Message.objects.create(conversation=conv, sender=request.user, text=text)
     conv.save()  # touch updated_at
     return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
+
+
+# ── Calendar endpoints ────────────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def availability_slots(request):
+    if request.method == 'GET':
+        # Public-ish: anyone logged in can view a psychologist's free slots
+        psych_id = request.query_params.get('psychologist')
+        if not psych_id:
+            return Response({'detail': 'psychologist param requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        slots = Availability.objects.filter(
+            psychologist_id=psych_id,
+            is_booked=False,
+        )
+        return Response(AvailabilitySerializer(slots, many=True).data)
+
+    # POST — psychologist creates a slot
+    if request.user.role != User.ROLE_PSYCHOLOGIST:
+        return Response({'detail': 'Solo psicólogos pueden agregar disponibilidad.'}, status=status.HTTP_403_FORBIDDEN)
+    serializer = AvailabilitySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    slot = serializer.save(psychologist=request.user)
+    return Response(AvailabilitySerializer(slot).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def availability_slot_detail(request, pk):
+    try:
+        slot = Availability.objects.get(pk=pk, psychologist=request.user)
+    except Availability.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    if slot.is_booked:
+        return Response({'detail': 'No se puede eliminar un turno ya reservado.'}, status=status.HTTP_400_BAD_REQUEST)
+    slot.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_slots(request):
+    """Psychologist's own availability (booked + free)."""
+    if request.user.role != User.ROLE_PSYCHOLOGIST:
+        return Response({'detail': 'Solo psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
+    slots = Availability.objects.filter(psychologist=request.user)
+    return Response(AvailabilitySerializer(slots, many=True).data)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def appointments(request):
+    if request.method == 'GET':
+        if request.user.role == User.ROLE_PATIENT:
+            qs = Appointment.objects.filter(patient=request.user).select_related(
+                'psychologist', 'psychologist__psychologist_profile', 'availability'
+            ).order_by('availability__date', 'availability__start_time')
+        else:
+            qs = Appointment.objects.filter(psychologist=request.user).select_related(
+                'patient', 'availability'
+            ).order_by('availability__date', 'availability__start_time')
+        return Response(AppointmentSerializer(qs, many=True).data)
+
+    # POST — patient books a slot
+    if request.user.role != User.ROLE_PATIENT:
+        return Response({'detail': 'Solo pacientes pueden reservar turnos.'}, status=status.HTTP_403_FORBIDDEN)
+    slot_id = request.data.get('slot_id')
+    notes = request.data.get('notes', '')
+    if not slot_id:
+        return Response({'detail': 'slot_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        slot = Availability.objects.select_for_update().get(pk=slot_id, is_booked=False)
+    except Availability.DoesNotExist:
+        return Response({'detail': 'Turno no disponible.'}, status=status.HTTP_400_BAD_REQUEST)
+    slot.is_booked = True
+    slot.save()
+    appt = Appointment.objects.create(
+        patient=request.user,
+        psychologist=slot.psychologist,
+        availability=slot,
+        notes=notes,
+    )
+    return Response(AppointmentSerializer(appt).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def appointment_detail(request, pk):
+    try:
+        if request.user.role == User.ROLE_PATIENT:
+            appt = Appointment.objects.get(pk=pk, patient=request.user)
+        else:
+            appt = Appointment.objects.get(pk=pk, psychologist=request.user)
+    except Appointment.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    new_status = request.data.get('status')
+    allowed = {
+        User.ROLE_PATIENT: [Appointment.STATUS_CANCELLED],
+        User.ROLE_PSYCHOLOGIST: [Appointment.STATUS_CONFIRMED, Appointment.STATUS_CANCELLED],
+    }
+    if new_status not in allowed.get(request.user.role, []):
+        return Response({'detail': 'Acción no permitida.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if new_status == Appointment.STATUS_CANCELLED:
+        appt.availability.is_booked = False
+        appt.availability.save()
+
+    appt.status = new_status
+    appt.save()
+    return Response(AppointmentSerializer(appt).data)
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────

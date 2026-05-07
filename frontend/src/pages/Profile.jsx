@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchMe, updateProfile, uploadAvatar, uploadDocument } from '../api'
+import { fetchMe, updateProfile, uploadAvatar, uploadDocument, fetchMySlots, createSlot, deleteSlot } from '../api'
 
 const SPECIALTIES = [
   'TCC', 'Psicoanálisis', 'Gestalt', 'Sistémica', 'ACT',
@@ -92,6 +92,131 @@ function VerificationBanner({ profile, onUpload, uploading }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function AvailabilitySection({ token }) {
+  const { showToast } = useToast()
+  const [slots, setSlots] = useState([])
+  const [form, setForm] = useState({ date: '', start_time: '', end_time: '' })
+  const [adding, setAdding] = useState(false)
+  const [deleting, setDeleting] = useState(null)
+
+  useEffect(() => {
+    fetchMySlots(token).then(setSlots)
+  }, [token])
+
+  async function handleAdd(e) {
+    e.preventDefault()
+    setAdding(true)
+    try {
+      const slot = await createSlot(token, form)
+      setSlots(prev => [...prev, slot].sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time)))
+      setForm({ date: '', start_time: '', end_time: '' })
+      showToast('Turno agregado ✓')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  async function handleDelete(slotId) {
+    setDeleting(slotId)
+    try {
+      await deleteSlot(token, slotId)
+      setSlots(prev => prev.filter(s => s.id !== slotId))
+      showToast('Turno eliminado.')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+
+  return (
+    <div className="mt-10 pt-8 border-t border-warm-border/50">
+      <h3 className="font-medium text-warm-dark mb-1">Disponibilidad</h3>
+      <p className="text-xs text-warm-mid mb-5">Agregá los turnos disponibles para que los pacientes puedan reservar.</p>
+
+      {/* Add slot form */}
+      <form onSubmit={handleAdd} className="flex flex-wrap gap-3 items-end mb-6">
+        <div className="flex flex-col gap-1">
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Fecha</label>
+          <input
+            type="date"
+            min={today}
+            required
+            value={form.date}
+            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora inicio</label>
+          <input
+            type="time"
+            required
+            value={form.start_time}
+            onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora fin</label>
+          <input
+            type="time"
+            required
+            value={form.end_time}
+            onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
+            className={inputCls}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={adding}
+          className="px-5 py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60"
+        >
+          {adding ? 'Agregando...' : '+ Agregar'}
+        </button>
+      </form>
+
+      {/* Slots list */}
+      {slots.length === 0 ? (
+        <p className="text-sm text-warm-mid">No tenés turnos cargados todavía.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {slots.map(slot => {
+            const dateLabel = new Date(slot.date + 'T00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+            return (
+              <div
+                key={slot.id}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm ${
+                  slot.is_booked
+                    ? 'bg-sage/[0.06] border-sage/30 text-sage-dark'
+                    : 'bg-card-bg border-warm-dark/[0.08] text-warm-dark'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-medium capitalize">{dateLabel}</span>
+                  <span className="text-warm-mid">{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</span>
+                  {slot.is_booked && <span className="text-xs bg-sage/20 text-sage-dark px-2 py-0.5 rounded-full font-medium">Reservado</span>}
+                </div>
+                {!slot.is_booked && (
+                  <button
+                    onClick={() => handleDelete(slot.id)}
+                    disabled={deleting === slot.id}
+                    className="text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40"
+                  >✕</button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -348,6 +473,8 @@ export default function Profile() {
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </form>
+
+      {user.role === 'psychologist' && <AvailabilitySection token={token} />}
     </div>
   )
 }

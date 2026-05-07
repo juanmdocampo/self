@@ -18,6 +18,13 @@ urlpatterns = [
     path('favorites/', views.my_favorites),
     path('favorites/<int:pk>/', views.delete_favorite),
 
+    # Calendar
+    path('calendar/slots/', views.availability_slots),
+    path('calendar/slots/mine/', views.my_slots),
+    path('calendar/slots/<int:pk>/', views.availability_slot_detail),
+    path('calendar/appointments/', views.appointments),
+    path('calendar/appointments/<int:pk>/', views.appointment_detail),
+
     # Chat
     path('chat/', views.conversations),
     path('chat/<int:pk>/messages/', views.conversation_messages),

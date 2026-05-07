@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchPsychologist, swipeAction } from '../api'
+import { fetchPsychologist, swipeAction, fetchPublicSlots, bookAppointment } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online y Presencial' }
@@ -17,16 +17,34 @@ export default function PsychProfile() {
   const [loading, setLoading] = useState(true)
   const [liked, setLiked] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
+  const [slots, setSlots] = useState([])
+  const [bookingSlot, setBookingSlot] = useState(null)
 
   useEffect(() => {
     fetchPsychologist(token, id)
       .then(data => {
         setPsych(data)
         setLiked(data.swipe_status === 'like')
+        fetchPublicSlots(token, id).then(setSlots)
       })
       .catch(() => navigate('/discover'))
       .finally(() => setLoading(false))
   }, [id, token, navigate])
+
+  async function handleBook(slotId) {
+    if (!token) { openLoginModal(); return }
+    if (bookingSlot) return
+    setBookingSlot(slotId)
+    try {
+      await bookAppointment(token, slotId)
+      setSlots(prev => prev.filter(s => s.id !== slotId))
+      showToast('¡Turno reservado! Revisá tu calendario.')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setBookingSlot(null)
+    }
+  }
 
   async function handleLike() {
     if (!token) { openLoginModal(); return }
@@ -153,6 +171,33 @@ export default function PsychProfile() {
         <div className="mb-8">
           <h2 className="text-xs text-warm-mid uppercase tracking-wider font-medium mb-3">Sobre mí</h2>
           <p className="text-warm-dark leading-relaxed">{psych.bio}</p>
+        </div>
+      )}
+
+      {/* Available slots */}
+      {slots.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xs text-warm-mid uppercase tracking-wider font-medium mb-3">Turnos disponibles</h2>
+          <div className="flex flex-col gap-2">
+            {slots.map(slot => {
+              const dateLabel = new Date(slot.date + 'T00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+              return (
+                <div key={slot.id} className="flex items-center justify-between bg-card-bg rounded-xl px-4 py-3 border border-warm-dark/[0.06]">
+                  <div>
+                    <span className="text-sm font-medium text-warm-dark capitalize">{dateLabel}</span>
+                    <span className="text-xs text-warm-mid ml-3">{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</span>
+                  </div>
+                  <button
+                    onClick={() => handleBook(slot.id)}
+                    disabled={bookingSlot === slot.id}
+                    className="px-4 py-1.5 rounded-full bg-sage-dark text-white text-xs font-medium hover:bg-sage transition-all disabled:opacity-60"
+                  >
+                    {bookingSlot === slot.id ? 'Reservando...' : 'Reservar'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

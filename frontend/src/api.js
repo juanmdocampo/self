@@ -128,6 +128,69 @@ export async function deleteFavorite(token, favoriteId) {
   if (!res.ok) throw new Error('Error al eliminar favorito.')
 }
 
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+export async function fetchPublicSlots(token, psychologistId) {
+  const res = await fetch(`${BASE}/calendar/slots/?psychologist=${psychologistId}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function fetchMySlots(token) {
+  const res = await fetch(`${BASE}/calendar/slots/mine/`, { headers: authHeaders(token) })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createSlot(token, data) {
+  const res = await fetch(`${BASE}/calendar/slots/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(Object.values(json).flat().join(' ') || 'Error al crear turno.')
+  return json
+}
+
+export async function deleteSlot(token, slotId) {
+  const res = await fetch(`${BASE}/calendar/slots/${slotId}/`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Error al eliminar turno.')
+}
+
+export async function fetchAppointments(token) {
+  const res = await fetch(`${BASE}/calendar/appointments/`, { headers: authHeaders(token) })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function bookAppointment(token, slotId, notes = '') {
+  const res = await fetch(`${BASE}/calendar/appointments/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ slot_id: slotId, notes }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al reservar.')
+  return json
+}
+
+export async function updateAppointment(token, appointmentId, newStatus) {
+  const res = await fetch(`${BASE}/calendar/appointments/${appointmentId}/`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ status: newStatus }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al actualizar.')
+  return json
+}
+
 export async function fetchConversations(token) {
   const res = await fetch(`${BASE}/chat/`, { headers: authHeaders(token) })
   if (!res.ok) return []

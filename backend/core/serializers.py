@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
+from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
 
 
 class PsychologistProfileSerializer(serializers.ModelSerializer):
@@ -157,6 +157,23 @@ class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
         fields = ['id', 'patient', 'psychologist', 'created_at', 'updated_at', 'last_message', 'unread_count']
+
+
+class AvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Availability
+        fields = ['id', 'date', 'start_time', 'end_time', 'is_booked']
+        read_only_fields = ['is_booked']
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    patient = UserSerializer(read_only=True)
+    psychologist = UserSerializer(read_only=True)
+    availability = AvailabilitySerializer(read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = ['id', 'patient', 'psychologist', 'availability', 'status', 'notes', 'created_at']
 
 
 class VerifySerializer(serializers.Serializer):

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from .models import Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
+from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
 
 
 @admin.register(User)
@@ -69,6 +69,18 @@ class SwipeActionAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ['patient', 'psychologist', 'created_at', 'is_active']
     list_filter = ['is_active']
+
+
+@admin.register(Availability)
+class AvailabilityAdmin(admin.ModelAdmin):
+    list_display = ['psychologist', 'date', 'start_time', 'end_time', 'is_booked']
+    list_filter = ['is_booked', 'date']
+
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'psychologist', 'availability', 'status', 'created_at']
+    list_filter = ['status']
 
 
 @admin.register(Conversation)
