@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { fetchFavorites, deleteFavorite, getOrCreateConversation } from '../api'
@@ -37,7 +37,10 @@ function FavoriteCard({ favorite, isPatient, onRemove, removing, onChat, chatLoa
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="font-medium text-warm-dark">{name}</div>
+            {isPatient
+              ? <Link to={`/psicologos/${person.id}`} className="font-medium text-warm-dark hover:text-sage-dark transition-colors">{name}</Link>
+              : <span className="font-medium text-warm-dark">{name}</span>
+            }
             {specialties && <div className="text-xs text-sage-dark mt-0.5">{specialties}</div>}
           </div>
           <div className="text-xs text-warm-mid flex-shrink-0">{formatDate(favorite.created_at)}</div>
@@ -58,13 +61,21 @@ function FavoriteCard({ favorite, isPatient, onRemove, removing, onChat, chatLoa
 
       <div className="flex flex-col items-end gap-2 flex-shrink-0">
         {isPatient && (
-          <button
-            onClick={() => onChat(favorite.psychologist.id)}
-            disabled={chatLoading}
-            className="text-xs px-3 py-1.5 rounded-full bg-sage-dark text-white font-medium hover:bg-sage transition-all disabled:opacity-50"
-          >
-            Chatear
-          </button>
+          <>
+            <Link
+              to={`/psicologos/${person.id}`}
+              className="text-xs px-3 py-1.5 rounded-full border border-warm-dark/20 text-warm-mid font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
+            >
+              Ver perfil
+            </Link>
+            <button
+              onClick={() => onChat(favorite.psychologist.id)}
+              disabled={chatLoading}
+              className="text-xs px-3 py-1.5 rounded-full bg-sage-dark text-white font-medium hover:bg-sage transition-all disabled:opacity-50"
+            >
+              Chatear
+            </button>
+          </>
         )}
         <button
           onClick={() => onRemove(favorite.id)}
