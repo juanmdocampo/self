@@ -15,7 +15,7 @@ const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Onli
 export default function PsychProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { token, openLoginModal } = useAuth()
+  const { token, openLoginModal, currentUser } = useAuth()
   const { showToast } = useToast()
 
   const [psych, setPsych] = useState(null)
