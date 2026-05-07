@@ -78,13 +78,18 @@ function AddSlotModal({ date, startTime, endTime, slotDuration, slotGap, onSave,
 
 // ── Slot detail modal (psychologist) ─────────────────────────────────────────
 
-function SlotDetailModal({ event, onApprove, onReject, onDelete, onClose, approving, rejecting, deleting }) {
+function SlotDetailModal({ event, onApprove, onReject, onApproveRb, onRejectRb, onCancelItem, onDelete, onClose, approving, rejecting, cancelling, deleting }) {
   const props = event.extendedProps
   const type = props.type
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  const titleMap = { available: 'Turno disponible', pending: 'Solicitud de turno', confirmed: 'Turno confirmado' }
+  const titleMap = {
+    available: 'Turno disponible',
+    pending: 'Solicitud de turno',
+    confirmed: 'Turno confirmado',
+    recurring_booking: props.status === 'pending' ? 'Reserva recurrente (pendiente)' : 'Turno recurrente',
+  }
 
   return (
     <Modal title={titleMap[type] || 'Turno'} onClose={onClose}>
@@ -101,8 +106,12 @@ function SlotDetailModal({ event, onApprove, onReject, onDelete, onClose, approv
             {' – '}
             {new Date(event.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
           </div>
+          {type === 'recurring_booking' && (
+            <div className="text-xs text-warm-mid mt-1">Recurrente semanal</div>
+          )}
         </div>
 
+        {/* One-off appointment: pending approval */}
         {type === 'pending' && !showRejectForm && (
           <>
             <button onClick={() => onApprove(props.appointment_id)} disabled={approving}
@@ -116,35 +125,88 @@ function SlotDetailModal({ event, onApprove, onReject, onDelete, onClose, approv
           </>
         )}
 
+        {/* One-off appointment: reject form */}
         {type === 'pending' && showRejectForm && (
           <>
             <div>
-              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">
-                Motivo (opcional)
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
+              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">Motivo (opcional)</label>
+              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-warm-dark/[0.15] bg-white text-sm text-warm-dark outline-none focus:border-sage-dark resize-none"
-                rows={3}
-                placeholder="Explicá el motivo..."
-              />
+                rows={3} placeholder="Explicá el motivo..." />
             </div>
             <button onClick={() => onReject(props.appointment_id, rejectReason)} disabled={rejecting}
               className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
               {rejecting ? 'Rechazando...' : 'Confirmar rechazo'}
             </button>
-            <button type="button" onClick={() => setShowRejectForm(false)} className="text-sm text-warm-mid text-center">
-              Cancelar
-            </button>
+            <button type="button" onClick={() => setShowRejectForm(false)} className="text-sm text-warm-mid text-center">Cancelar</button>
           </>
         )}
 
+        {/* One-off confirmed: just cancel */}
+        {type === 'confirmed' && (
+          <button onClick={() => onCancelItem(props.appointment_id, false)} disabled={cancelling}
+            className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
+            {cancelling ? 'Cancelando...' : 'Cancelar turno'}
+          </button>
+        )}
+
+        {/* Available slot: delete */}
         {type === 'available' && (
           <button onClick={() => onDelete(props.slot_id)} disabled={deleting}
             className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
             {deleting ? 'Eliminando...' : 'Eliminar turno'}
           </button>
+        )}
+
+        {/* Recurring booking: pending */}
+        {type === 'recurring_booking' && props.status === 'pending' && !showRejectForm && (
+          <>
+            <button onClick={() => onApproveRb(props.recurring_booking_id)} disabled={approving}
+              className="w-full py-2.5 rounded-xl bg-sage-dark text-white text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60">
+              {approving ? 'Confirmando...' : '✓ Confirmar serie recurrente'}
+            </button>
+            <button onClick={() => setShowRejectForm(true)}
+              className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all">
+              ✕ Rechazar
+            </button>
+          </>
+        )}
+
+        {/* Recurring booking: reject form */}
+        {type === 'recurring_booking' && props.status === 'pending' && showRejectForm && (
+          <>
+            <div>
+              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">Motivo (opcional)</label>
+              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-warm-dark/[0.15] bg-white text-sm text-warm-dark outline-none focus:border-sage-dark resize-none"
+                rows={3} placeholder="Explicá el motivo..." />
+            </div>
+            <button onClick={() => onRejectRb(props.recurring_booking_id, rejectReason)} disabled={rejecting}
+              className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
+              {rejecting ? 'Rechazando...' : 'Confirmar rechazo'}
+            </button>
+            <button type="button" onClick={() => setShowRejectForm(false)} className="text-sm text-warm-mid text-center">Cancelar</button>
+          </>
+        )}
+
+        {/* Recurring booking: confirmed — cancel this or whole series */}
+        {type === 'recurring_booking' && props.status === 'confirmed' && (
+          <>
+            <button
+              onClick={() => onCancelItem(props.recurring_booking_id, true, props.date)}
+              disabled={cancelling}
+              className="w-full py-2.5 rounded-xl border border-warm-dark/20 text-warm-dark text-sm font-medium hover:bg-warm-dark/5 transition-all disabled:opacity-60"
+            >
+              {cancelling ? 'Cancelando...' : 'Cancelar solo este turno'}
+            </button>
+            <button
+              onClick={() => onCancelItem(props.recurring_booking_id, true)}
+              disabled={cancelling}
+              className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60"
+            >
+              {cancelling ? 'Cancelando...' : 'Cancelar toda la serie'}
+            </button>
+          </>
         )}
       </div>
     </Modal>
@@ -153,11 +215,10 @@ function SlotDetailModal({ event, onApprove, onReject, onDelete, onClose, approv
 
 // ── Appointment detail modal (patient) ───────────────────────────────────────
 
-function AppointmentDetailModal({ event, onCancel, onClose, cancelling }) {
+function AppointmentDetailModal({ event, onCancelItem, onClose, cancelling }) {
   const props = event.extendedProps
   const statusLabel = { pending: 'Pendiente', confirmed: 'Confirmado', cancelled: 'Cancelado', rejected: 'Rechazado' }
   const statusCls = { pending: 'text-amber-600', confirmed: 'text-green-600', cancelled: 'text-warm-mid', rejected: 'text-red-500' }
-
   const isRecurring = props.type === 'recurring_booking'
 
   return (
@@ -177,7 +238,7 @@ function AppointmentDetailModal({ event, onCancel, onClose, cancelling }) {
           </div>
           <div className={`text-xs font-medium mt-2 ${statusCls[props.status] || 'text-warm-mid'}`}>
             {statusLabel[props.status] || props.status}
-            {isRecurring && ' · Recurrente'}
+            {isRecurring && ' · Recurrente semanal'}
           </div>
           {props.rejection_reason && (
             <div className="mt-2 text-xs text-red-500 bg-red-50 rounded-lg px-2 py-1.5">
@@ -185,17 +246,34 @@ function AppointmentDetailModal({ event, onCancel, onClose, cancelling }) {
             </div>
           )}
         </div>
-        {props.status !== 'cancelled' && props.status !== 'rejected' && (
+
+        {props.status !== 'cancelled' && props.status !== 'rejected' && !isRecurring && (
           <button
-            onClick={() => onCancel(
-              isRecurring ? props.recurring_booking_id : props.appointment_id,
-              isRecurring,
-            )}
+            onClick={() => onCancelItem(props.appointment_id, false)}
             disabled={cancelling}
             className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60"
           >
-            {cancelling ? 'Cancelando...' : (isRecurring ? 'Cancelar serie recurrente' : 'Cancelar turno')}
+            {cancelling ? 'Cancelando...' : 'Cancelar turno'}
           </button>
+        )}
+
+        {props.status !== 'cancelled' && props.status !== 'rejected' && isRecurring && (
+          <>
+            <button
+              onClick={() => onCancelItem(props.recurring_booking_id, true, props.date)}
+              disabled={cancelling}
+              className="w-full py-2.5 rounded-xl border border-warm-dark/20 text-warm-dark text-sm font-medium hover:bg-warm-dark/5 transition-all disabled:opacity-60"
+            >
+              {cancelling ? 'Cancelando...' : 'Cancelar solo este turno'}
+            </button>
+            <button
+              onClick={() => onCancelItem(props.recurring_booking_id, true)}
+              disabled={cancelling}
+              className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60"
+            >
+              {cancelling ? 'Cancelando...' : 'Cancelar toda la serie'}
+            </button>
+          </>
         )}
       </div>
     </Modal>
@@ -499,17 +577,48 @@ export default function Calendar() {
     }
   }
 
-  async function handleCancelItem(id, isRecurring) {
+  async function handleApproveRb(rbId) {
+    setApproving(true)
+    try {
+      await updateRecurringBooking(token, rbId, { status: 'confirmed' })
+      calendarRef.current?.getApi().refetchEvents()
+      setDetailEvent(null)
+      showToast('Serie recurrente confirmada ✓')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setApproving(false)
+    }
+  }
+
+  async function handleRejectRb(rbId, reason) {
+    setRejecting(true)
+    try {
+      await updateRecurringBooking(token, rbId, { status: 'rejected', rejection_reason: reason })
+      calendarRef.current?.getApi().refetchEvents()
+      setDetailEvent(null)
+      showToast('Serie recurrente rechazada.')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setRejecting(false)
+    }
+  }
+
+  // cancelDate = specific date string → cancel only that occurrence; omit → cancel whole series / single appt
+  async function handleCancelItem(id, isRecurring, cancelDate = null) {
     setCancelling(true)
     try {
       if (isRecurring) {
-        await updateRecurringBooking(token, id, { status: 'cancelled' })
+        const payload = cancelDate ? { cancel_date: cancelDate } : { status: 'cancelled' }
+        await updateRecurringBooking(token, id, payload)
+        showToast(cancelDate ? 'Turno cancelado.' : 'Serie cancelada.')
       } else {
         await updateAppointment(token, id, 'cancelled')
+        showToast('Turno cancelado.')
       }
       calendarRef.current?.getApi().refetchEvents()
       setDetailEvent(null)
-      showToast('Turno cancelado.')
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -583,10 +692,14 @@ export default function Calendar() {
           event={detailEvent}
           onApprove={handleApproveAppt}
           onReject={handleRejectAppt}
+          onApproveRb={handleApproveRb}
+          onRejectRb={handleRejectRb}
+          onCancelItem={handleCancelItem}
           onDelete={handleDeleteSlot}
           onClose={() => setDetailEvent(null)}
           approving={approving}
           rejecting={rejecting}
+          cancelling={cancelling}
           deleting={deleting}
         />
       )}
@@ -594,7 +707,7 @@ export default function Calendar() {
       {isPatientEvent && (
         <AppointmentDetailModal
           event={detailEvent}
-          onCancel={handleCancelItem}
+          onCancelItem={handleCancelItem}
           onClose={() => setDetailEvent(null)}
           cancelling={cancelling}
         />

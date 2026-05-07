@@ -280,18 +280,16 @@ def _generate_events_for_range(psychologist, start_date, end_date, public=False)
     """Return FullCalendar event dicts for a psychologist in [start_date, end_date]."""
     events = []
 
-    # Specific slots
+    # 1. Specific Availability slots
     slots = Availability.objects.filter(
         psychologist=psychologist, date__range=[start_date, end_date]
     ).select_related('appointment__patient')
 
-    booked_keys = set()
+    booked_keys = set()  # (date, start_time) of specific slots
     for slot in slots:
         if public and slot.is_booked:
             continue
-        patient_name = None
-        appt_status = None
-        appt_id = None
+        patient_name = appt_status = appt_id = None
         if slot.is_booked:
             try:
                 appt = slot.appointment
@@ -303,14 +301,71 @@ def _generate_events_for_range(psychologist, start_date, end_date, public=False)
         events.append(_slot_event(slot, patient_name, appt_status, appt_id))
         booked_keys.add((slot.date, slot.start_time))
 
-    # Recurring rules
+    # 2. Recurring bookings
+    rb_qs = RecurringBooking.objects.filter(
+        psychologist=psychologist,
+    ).exclude(status__in=[RecurringBooking.STATUS_CANCELLED, RecurringBooking.STATUS_REJECTED])
+    if public:
+        rb_qs = rb_qs.filter(status=RecurringBooking.STATUS_CONFIRMED)
+    rb_qs = rb_qs.select_related('patient')
+
+    # (day_of_week, start_time) → set of cancelled dates, for confirmed RBs blocking public slots
+    rb_blocked = {}
+    rb_suppress = set()  # (date, start_time) shown via recurring booking in psych calendar
+
+    for rb in rb_qs:
+        key = (rb.day_of_week, rb.start_time)
+        if rb.status == RecurringBooking.STATUS_CONFIRMED:
+            if key not in rb_blocked:
+                rb_blocked[key] = set(rb.cancelled_dates)
+            else:
+                rb_blocked[key].update(rb.cancelled_dates)
+
+        if not public:
+            color = '#D97706' if rb.status == RecurringBooking.STATUS_PENDING else '#5C7A5F'
+            patient_name = rb.patient.get_full_name() or rb.patient.username
+            label = (f'Pendiente — {patient_name}' if rb.status == RecurringBooking.STATUS_PENDING
+                     else f'Recurrente — {patient_name}')
+            cur = start_date
+            while cur <= end_date:
+                if (cur.weekday() == rb.day_of_week
+                        and cur.isoformat() not in rb.cancelled_dates
+                        and (cur, rb.start_time) not in booked_keys):
+                    events.append({
+                        'id': f'rb_{rb.id}_{cur.isoformat()}',
+                        'title': label,
+                        'start': f'{cur}T{rb.start_time}',
+                        'end': f'{cur}T{rb.end_time}',
+                        'backgroundColor': color,
+                        'borderColor': color,
+                        'extendedProps': {
+                            'type': 'recurring_booking',
+                            'recurring_booking_id': rb.id,
+                            'status': rb.status,
+                            'patient_name': patient_name,
+                            'date': cur.isoformat(),
+                        },
+                    })
+                    rb_suppress.add((cur, rb.start_time))
+                cur += timedelta(days=1)
+
+    # 3. Recurring availability rules — skip slots already covered
     rules = RecurringAvailability.objects.filter(psychologist=psychologist, is_active=True)
     current = start_date
     while current <= end_date:
         for rule in rules:
-            if current.weekday() == rule.day_of_week:
-                if (current, rule.start_time) not in booked_keys:
-                    events.append(_recurring_event(rule, current))
+            if current.weekday() != rule.day_of_week:
+                continue
+            if (current, rule.start_time) in booked_keys:
+                continue
+            if (current, rule.start_time) in rb_suppress:
+                continue
+            # In public view: hide if a confirmed recurring booking covers this occurrence
+            rb_key = (rule.day_of_week, rule.start_time)
+            if public and rb_key in rb_blocked:
+                if current.isoformat() not in rb_blocked[rb_key]:
+                    continue  # blocked by a confirmed recurring booking
+            events.append(_recurring_event(rule, current))
         current += timedelta(days=1)
 
     return events
@@ -537,8 +592,21 @@ def appointments(request):
     base_date = datetime.fromisoformat(slot_date).date()
     weeks = max(1, recurring_weeks)
 
+    # Confirmed recurring bookings for this psych+time block certain dates
+    blocking_rbs = list(RecurringBooking.objects.filter(
+        psychologist=psych,
+        start_time=start_time,
+        status=RecurringBooking.STATUS_CONFIRMED,
+    ))
+
     for w in range(weeks):
         target = base_date + timedelta(weeks=w)
+        # Skip dates blocked by a confirmed recurring booking
+        if any(
+            rb.day_of_week == target.weekday() and target.isoformat() not in rb.cancelled_dates
+            for rb in blocking_rbs
+        ):
+            continue
         slot, _ = Availability.objects.get_or_create(
             psychologist=psych, date=target, start_time=start_time,
             defaults={'end_time': end_time},
@@ -735,6 +803,14 @@ def recurring_booking_detail(request, pk):
             booking = RecurringBooking.objects.get(pk=pk, psychologist=request.user)
     except RecurringBooking.DoesNotExist:
         return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Single-occurrence cancellation
+    cancel_date = request.data.get('cancel_date')
+    if cancel_date:
+        if cancel_date not in booking.cancelled_dates:
+            booking.cancelled_dates.append(cancel_date)
+            booking.save()
+        return Response(RecurringBookingSerializer(booking).data)
 
     new_status = request.data.get('status')
     allowed = {
