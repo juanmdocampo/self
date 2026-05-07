@@ -7,7 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import esLocale from '@fullcalendar/core/locales/es'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchPsychologist, swipeAction, fetchPsychologistPublicEvents, bookAppointment } from '../api'
+import { fetchPsychologist, swipeAction, fetchPsychologistPublicEvents, bookAppointment, bookRecurringAppointment } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online y Presencial' }
@@ -25,6 +25,8 @@ export default function PsychProfile() {
   const [bookModal, setBookModal] = useState(null)  // { event }
   const [bookingSlot, setBookingSlot] = useState(false)
   const [recurringWeeks, setRecurringWeeks] = useState(0)
+  // -1 = indefinite recurring booking
+
 
   const calendarRef = useRef(null)
 
@@ -59,21 +61,37 @@ export default function PsychProfile() {
     setBookingSlot(true)
     const props = bookModal.event.extendedProps
     try {
-      const payload = props.type === 'available'
-        ? { slot_id: props.slot_id, recurring_weeks: recurringWeeks }
-        : {
-            psychologist_id: psych.id,
-            date: props.date,
-            start_time: props.start_time,
-            end_time: props.end_time,
-            recurring_weeks: recurringWeeks,
-          }
-      await bookAppointment(token, payload)
-      calendarRef.current?.getApi().refetchEvents()
-      setBookModal(null)
-      showToast(recurringWeeks > 0
-        ? `¡${recurringWeeks} turnos reservados! Revisá tu calendario.`
-        : '¡Turno reservado! Revisá tu calendario.')
+      if (recurringWeeks === -1) {
+        // Indefinite recurring booking
+        const eventDate = new Date(bookModal.event.start)
+        const dayOfWeek = (eventDate.getDay() + 6) % 7  // JS Sunday=0 → Mon=0
+        const toHHMM = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+        await bookRecurringAppointment(token, {
+          psychologist_id: psych.id,
+          day_of_week: dayOfWeek,
+          start_time: props.start_time || toHHMM(new Date(bookModal.event.start)),
+          end_time: props.end_time || toHHMM(new Date(bookModal.event.end)),
+        })
+        calendarRef.current?.getApi().refetchEvents()
+        setBookModal(null)
+        showToast('¡Reserva recurrente enviada! El psicólogo debe aprobarla.')
+      } else {
+        const payload = props.type === 'available'
+          ? { slot_id: props.slot_id, recurring_weeks: recurringWeeks }
+          : {
+              psychologist_id: psych.id,
+              date: props.date,
+              start_time: props.start_time,
+              end_time: props.end_time,
+              recurring_weeks: recurringWeeks,
+            }
+        await bookAppointment(token, payload)
+        calendarRef.current?.getApi().refetchEvents()
+        setBookModal(null)
+        showToast(recurringWeeks > 0
+          ? `¡${recurringWeeks} turnos reservados! Revisá tu calendario.`
+          : '¡Turno solicitado! El psicólogo debe confirmarlo.')
+      }
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -272,6 +290,7 @@ export default function PsychProfile() {
                 <option value={4}>4 semanas</option>
                 <option value={8}>8 semanas</option>
                 <option value={12}>12 semanas</option>
+                <option value={-1}>Indefinido (recurrente)</option>
               </select>
             </div>
             <button
@@ -279,7 +298,7 @@ export default function PsychProfile() {
               disabled={bookingSlot}
               className="w-full py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60"
             >
-              {bookingSlot ? 'Reservando...' : recurringWeeks > 0 ? `Reservar ${recurringWeeks} turnos` : 'Confirmar reserva'}
+              {bookingSlot ? 'Reservando...' : recurringWeeks === -1 ? 'Solicitar turno recurrente' : recurringWeeks > 0 ? `Reservar ${recurringWeeks} turnos` : 'Solicitar turno'}
             </button>
           </div>
         </div>

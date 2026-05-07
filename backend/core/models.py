@@ -54,6 +54,8 @@ class PsychologistProfile(models.Model):
     rejection_reason = models.TextField(blank=True, default='')
     document_upload = models.FileField(upload_to='documents/', blank=True, null=True)
     is_accepting_patients = models.BooleanField(default=True)
+    slot_duration = models.PositiveIntegerField(default=60, help_text='Duración de cada sesión en minutos')
+    slot_gap = models.PositiveIntegerField(default=0, help_text='Pausa entre sesiones en minutos')
 
     @property
     def is_verified(self):
@@ -134,10 +136,12 @@ class Availability(models.Model):
 class Appointment(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
+    STATUS_REJECTED = 'rejected'
     STATUS_CANCELLED = 'cancelled'
     STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pendiente'),
+        (STATUS_PENDING, 'Pendiente de aprobación'),
         (STATUS_CONFIRMED, 'Confirmado'),
+        (STATUS_REJECTED, 'Rechazado'),
         (STATUS_CANCELLED, 'Cancelado'),
     ]
 
@@ -146,11 +150,72 @@ class Appointment(models.Model):
     availability = models.OneToOneField(Availability, on_delete=models.CASCADE, related_name='appointment')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
     recurring_id = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'Turno: {self.patient.username} con {self.psychologist.username} — {self.availability.date}'
+
+
+class RecurringBooking(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pendiente de aprobación'),
+        (STATUS_CONFIRMED, 'Confirmado'),
+        (STATUS_REJECTED, 'Rechazado'),
+        (STATUS_CANCELLED, 'Cancelado'),
+    ]
+    DAYS = RecurringAvailability.DAYS
+
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recurring_bookings')
+    psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recurring_bookings_received')
+    day_of_week = models.IntegerField(choices=DAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    rejection_reason = models.TextField(blank=True)
+    cancelled_dates = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        day = dict(self.DAYS)[self.day_of_week]
+        return f'Recurrente: {self.patient.username} con {self.psychologist.username} — {day}'
+
+
+class AppointmentModification(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pendiente'),
+        (STATUS_ACCEPTED, 'Aceptado'),
+        (STATUS_REJECTED, 'Rechazado'),
+    ]
+
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.CASCADE,
+        related_name='modifications', null=True, blank=True,
+    )
+    recurring_booking = models.ForeignKey(
+        RecurringBooking, on_delete=models.CASCADE,
+        related_name='modifications', null=True, blank=True,
+    )
+    proposed_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='proposed_modifications')
+    is_cancellation = models.BooleanField(default=False)
+    new_date = models.DateField(null=True, blank=True)
+    new_start_time = models.TimeField(null=True, blank=True)
+    new_end_time = models.TimeField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Modificación por {self.proposed_by.username} — {self.status}'
 
 
 class Conversation(models.Model):

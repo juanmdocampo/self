@@ -24,7 +24,12 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(python manage.py makemigrations core --name recurring_availability)"
+      "Bash(python manage.py makemigrations core --name recurring_availability)",
+      "Bash(python manage.py makemigrations core --name calendar_v2)",
+      "Bash(python -c \"import django; django.setup\\(\\); from core import views, serializers\")",
+      "Bash(DJANGO_SETTINGS_MODULE=backend.settings python -c \"import django; django.setup\\(\\); from core import views, serializers; print\\('OK'\\)\")",
+      "Bash(python -c \"import ast, sys; ast.parse\\(open\\('core/views.py'\\).read\\(\\)\\); ast.parse\\(open\\('core/serializers.py'\\).read\\(\\)\\); ast.parse\\(open\\('core/urls.py'\\).read\\(\\)\\); print\\('All files parse OK'\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

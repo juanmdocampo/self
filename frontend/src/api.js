@@ -207,15 +207,67 @@ export async function bookAppointment(token, payload) {
   return json
 }
 
-export async function updateAppointment(token, appointmentId, newStatus) {
+export async function updateAppointment(token, appointmentId, newStatus, rejectionReason = null) {
+  const body = { status: newStatus }
+  if (rejectionReason !== null) body.rejection_reason = rejectionReason
   const res = await fetch(`${BASE}/calendar/appointments/${appointmentId}/`, {
     method: 'PATCH',
     headers: authHeaders(token),
-    body: JSON.stringify({ status: newStatus }),
+    body: JSON.stringify(body),
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json.detail || 'Error al actualizar.')
   return json
+}
+
+export async function createSlotsRange(token, data) {
+  const res = await fetch(`${BASE}/calendar/slots/range/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al generar turnos.')
+  return json
+}
+
+export async function createRecurringRange(token, data) {
+  const res = await fetch(`${BASE}/calendar/recurring/range/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al generar disponibilidad.')
+  return json
+}
+
+export async function bookRecurringAppointment(token, data) {
+  const res = await fetch(`${BASE}/calendar/recurring-bookings/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al reservar.')
+  return json
+}
+
+export async function updateRecurringBooking(token, bookingId, data) {
+  const res = await fetch(`${BASE}/calendar/recurring-bookings/${bookingId}/`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al actualizar.')
+  return json
+}
+
+export async function fetchPendingItems(token) {
+  const res = await fetch(`${BASE}/calendar/pending/`, { headers: authHeaders(token) })
+  if (!res.ok) return { appointments: [], recurring_bookings: [] }
+  return res.json()
 }
 
 export async function fetchConversations(token) {

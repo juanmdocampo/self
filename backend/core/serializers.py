@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, RecurringAvailability, SwipeAction, User
+from .models import Appointment, AppointmentModification, Availability, Conversation, Favorite, Message, PsychologistProfile, RecurringAvailability, RecurringBooking, SwipeAction, User
 
 
 class PsychologistProfileSerializer(serializers.ModelSerializer):
@@ -16,6 +16,7 @@ class PsychologistProfileSerializer(serializers.ModelSerializer):
             'license_number', 'languages', 'city',
             'verification_status', 'rejection_reason',
             'is_verified', 'is_accepting_patients',
+            'slot_duration', 'slot_gap',
         ]
 
 
@@ -32,6 +33,7 @@ class AdminPsychologistProfileSerializer(serializers.ModelSerializer):
             'license_number', 'languages', 'city',
             'verification_status', 'rejection_reason', 'document_upload',
             'is_verified', 'is_accepting_patients',
+            'slot_duration', 'slot_gap',
         ]
 
 
@@ -93,7 +95,10 @@ class LoginSerializer(serializers.Serializer):
 class UpdatePsychologistProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PsychologistProfile
-        fields = ['specialties', 'modality', 'session_price', 'years_experience', 'city', 'languages', 'license_number']
+        fields = [
+            'specialties', 'modality', 'session_price', 'years_experience',
+            'city', 'languages', 'license_number', 'slot_duration', 'slot_gap',
+        ]
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
@@ -179,7 +184,31 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = ['id', 'patient', 'psychologist', 'availability', 'status', 'notes', 'created_at']
+        fields = ['id', 'patient', 'psychologist', 'availability', 'status', 'rejection_reason', 'notes', 'created_at']
+
+
+class RecurringBookingSerializer(serializers.ModelSerializer):
+    patient = UserSerializer(read_only=True)
+    psychologist = UserSerializer(read_only=True)
+
+    class Meta:
+        model = RecurringBooking
+        fields = [
+            'id', 'patient', 'psychologist', 'day_of_week', 'start_time', 'end_time',
+            'notes', 'status', 'rejection_reason', 'cancelled_dates', 'created_at',
+        ]
+
+
+class AppointmentModificationSerializer(serializers.ModelSerializer):
+    proposed_by = UserSerializer(read_only=True)
+
+    class Meta:
+        model = AppointmentModification
+        fields = [
+            'id', 'appointment', 'recurring_booking', 'proposed_by',
+            'is_cancellation', 'new_date', 'new_start_time', 'new_end_time',
+            'reason', 'status', 'created_at',
+        ]
 
 
 class VerifySerializer(serializers.Serializer):

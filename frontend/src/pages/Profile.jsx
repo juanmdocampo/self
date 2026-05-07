@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchMe, updateProfile, uploadAvatar, uploadDocument, fetchRecurringRules, createRecurringRule, deleteRecurringRule } from '../api'
+import { fetchMe, updateProfile, uploadAvatar, uploadDocument, fetchRecurringRules, deleteRecurringRule, createRecurringRange } from '../api'
 
 const SPECIALTIES = [
   'TCC', 'Psicoanálisis', 'Gestalt', 'Sistémica', 'ACT',
@@ -98,7 +98,7 @@ function VerificationBanner({ profile, onUpload, uploading }) {
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-function AvailabilitySection({ token }) {
+function AvailabilitySection({ token, slotDuration, slotGap }) {
   const { showToast } = useToast()
   const [rules, setRules] = useState([])
   const [form, setForm] = useState({ day_of_week: '0', start_time: '', end_time: '' })
@@ -113,10 +113,15 @@ function AvailabilitySection({ token }) {
     e.preventDefault()
     setAdding(true)
     try {
-      const rule = await createRecurringRule(token, form)
-      setRules(prev => [...prev, rule].sort((a, b) => a.day_of_week - b.day_of_week))
+      const res = await createRecurringRange(token, {
+        day_of_week: form.day_of_week,
+        start_time: form.start_time,
+        end_time: form.end_time,
+      })
+      const updated = await fetchRecurringRules(token)
+      setRules(updated)
       setForm({ day_of_week: '0', start_time: '', end_time: '' })
-      showToast('Disponibilidad recurrente agregada ✓')
+      showToast(`${res.created} turno${res.created !== 1 ? 's' : ''} generado${res.created !== 1 ? 's' : ''} ✓`)
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -129,7 +134,7 @@ function AvailabilitySection({ token }) {
     try {
       await deleteRecurringRule(token, ruleId)
       setRules(prev => prev.filter(r => r.id !== ruleId))
-      showToast('Regla eliminada.')
+      showToast('Turno eliminado.')
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -137,11 +142,17 @@ function AvailabilitySection({ token }) {
     }
   }
 
+  const duration = slotDuration || 60
+  const gap = slotGap || 0
+
   return (
     <div className="mt-10 pt-8 border-t border-warm-border/50">
       <h3 className="font-medium text-warm-dark mb-1">Disponibilidad recurrente</h3>
+      <p className="text-xs text-warm-mid mb-1">
+        Ingresá un rango horario y se generarán turnos de <strong>{duration} min</strong>
+        {gap > 0 ? ` con ${gap} min de pausa` : ''} automáticamente.
+      </p>
       <p className="text-xs text-warm-mid mb-5">
-        Definí tu horario habitual. Los turnos de esta regla aparecerán automáticamente en tu calendario.
         También podés agregar turnos puntuales desde el <a href="/calendar" className="text-sage-dark underline">Calendario</a>.
       </p>
 
@@ -157,18 +168,18 @@ function AvailabilitySection({ token }) {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora inicio</label>
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Inicio del rango</label>
           <input type="time" required className={inputCls} value={form.start_time}
             onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora fin</label>
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Fin del rango</label>
           <input type="time" required className={inputCls} value={form.end_time}
             onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
         </div>
         <button type="submit" disabled={adding}
           className="px-5 py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60">
-          {adding ? 'Agregando...' : '+ Agregar'}
+          {adding ? 'Generando...' : '+ Generar turnos'}
         </button>
       </form>
 
@@ -265,6 +276,8 @@ export default function Profile() {
           city: p.city || '',
           license_number: p.license_number || '',
           languages: (p.languages || []).join(', '),
+          slot_duration: p.slot_duration ?? 60,
+          slot_gap: p.slot_gap ?? 0,
         })
       }
     }).catch(() => showToast('Error al cargar perfil'))
@@ -311,6 +324,8 @@ export default function Profile() {
           languages: psyForm.languages.split(',').map(l => l.trim()).filter(Boolean),
           session_price: psyForm.session_price || null,
           years_experience: psyForm.years_experience || 0,
+          slot_duration: Number(psyForm.slot_duration) || 60,
+          slot_gap: Number(psyForm.slot_gap) || 0,
         }
       }
       let updated = await updateProfile(token, body)
@@ -429,6 +444,25 @@ export default function Profile() {
                 <input className={inputCls} placeholder="Español, Inglés" value={psyForm.languages} onChange={e => setPsyForm(f => ({ ...f, languages: e.target.value }))} />
               </Field>
             </div>
+
+            <div className="pt-3 border-t border-warm-border/30">
+              <h3 className="font-medium text-warm-dark mb-3 text-sm">Configuración de turnos</h3>
+              <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
+                <Field label="Duración de cada sesión (min)">
+                  <input type="number" min="15" max="180" step="5" className={inputCls}
+                    value={psyForm.slot_duration}
+                    onChange={e => setPsyForm(f => ({ ...f, slot_duration: e.target.value }))} />
+                </Field>
+                <Field label="Pausa entre sesiones (min)">
+                  <input type="number" min="0" max="60" step="5" className={inputCls}
+                    value={psyForm.slot_gap}
+                    onChange={e => setPsyForm(f => ({ ...f, slot_gap: e.target.value }))} />
+                </Field>
+              </div>
+              <p className="text-xs text-warm-mid mt-2">
+                Estos valores se usan para generar turnos automáticamente desde un rango horario.
+              </p>
+            </div>
           </>
         )}
 
@@ -445,7 +479,13 @@ export default function Profile() {
         </button>
       </form>
 
-      {user.role === 'psychologist' && <AvailabilitySection token={token} />}
+      {user.role === 'psychologist' && (
+        <AvailabilitySection
+          token={token}
+          slotDuration={user.psychologist_profile?.slot_duration}
+          slotGap={user.psychologist_profile?.slot_gap}
+        />
+      )}
     </div>
   )
 }
