@@ -23,7 +23,8 @@
       "Bash(python -m pip install gunicorn whitenoise dj-database-url)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(python manage.py makemigrations core --name recurring_availability)"
     ]
   }
 }

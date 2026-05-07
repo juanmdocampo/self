@@ -130,16 +130,18 @@ export async function deleteFavorite(token, favoriteId) {
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 
-export async function fetchPublicSlots(token, psychologistId) {
-  const res = await fetch(`${BASE}/calendar/slots/?psychologist=${psychologistId}`, {
-    headers: authHeaders(token),
-  })
+export async function fetchCalendarEvents(token, start, end) {
+  const params = new URLSearchParams({ start, end })
+  const res = await fetch(`${BASE}/calendar/events/?${params}`, { headers: authHeaders(token) })
   if (!res.ok) return []
   return res.json()
 }
 
-export async function fetchMySlots(token) {
-  const res = await fetch(`${BASE}/calendar/slots/mine/`, { headers: authHeaders(token) })
+export async function fetchPsychologistPublicEvents(token, psychId, start, end) {
+  const params = new URLSearchParams({ start, end })
+  const res = await fetch(`${BASE}/calendar/events/psychologist/${psychId}/?${params}`, {
+    headers: authHeaders(token),
+  })
   if (!res.ok) return []
   return res.json()
 }
@@ -163,17 +165,42 @@ export async function deleteSlot(token, slotId) {
   if (!res.ok) throw new Error('Error al eliminar turno.')
 }
 
+export async function fetchRecurringRules(token) {
+  const res = await fetch(`${BASE}/calendar/recurring/`, { headers: authHeaders(token) })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createRecurringRule(token, data) {
+  const res = await fetch(`${BASE}/calendar/recurring/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(Object.values(json).flat().join(' ') || 'Error al crear regla.')
+  return json
+}
+
+export async function deleteRecurringRule(token, ruleId) {
+  const res = await fetch(`${BASE}/calendar/recurring/${ruleId}/`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Error al eliminar regla.')
+}
+
 export async function fetchAppointments(token) {
   const res = await fetch(`${BASE}/calendar/appointments/`, { headers: authHeaders(token) })
   if (!res.ok) return []
   return res.json()
 }
 
-export async function bookAppointment(token, slotId, notes = '') {
+export async function bookAppointment(token, payload) {
   const res = await fetch(`${BASE}/calendar/appointments/`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ slot_id: slotId, notes }),
+    body: JSON.stringify(payload),
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json.detail || 'Error al reservar.')

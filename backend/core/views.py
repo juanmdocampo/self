@@ -1,15 +1,18 @@
+import uuid
+from datetime import date, datetime, timedelta
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, SwipeAction, User
+from .models import Appointment, Availability, Conversation, Favorite, Message, PsychologistProfile, RecurringAvailability, SwipeAction, User
 from .serializers import (
     AdminUserSerializer, AppointmentSerializer, AvailabilitySerializer,
     ConversationSerializer, FavoriteSerializer, LoginSerializer,
-    MessageSerializer, RegisterSerializer, SwipeSerializer, UpdateProfileSerializer,
-    UserSerializer, VerifySerializer,
+    MessageSerializer, RecurringAvailabilitySerializer, RegisterSerializer,
+    SwipeSerializer, UpdateProfileSerializer, UserSerializer, VerifySerializer,
 )
 
 
@@ -223,25 +226,172 @@ def conversation_messages(request, pk):
     return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
 
+# ── Calendar helpers ──────────────────────────────────────────────────────────
+
+def _parse_date(s):
+    return datetime.fromisoformat(s[:10]).date() if s else None
+
+
+def _slot_event(slot, patient_name=None):
+    booked = slot.is_booked
+    color = '#2C2416' if booked else '#8BAF8E'
+    title = f'Reservado — {patient_name}' if booked and patient_name else ('Reservado' if booked else 'Disponible')
+    return {
+        'id': f'slot_{slot.id}',
+        'title': title,
+        'start': f'{slot.date}T{slot.start_time}',
+        'end': f'{slot.date}T{slot.end_time}',
+        'backgroundColor': color,
+        'borderColor': '#5C7A5F' if not booked else '#2C2416',
+        'extendedProps': {
+            'type': 'booked' if booked else 'available',
+            'slot_id': slot.id,
+        },
+    }
+
+
+def _recurring_event(rule, target_date):
+    return {
+        'id': f'recurring_{rule.id}_{target_date.isoformat()}',
+        'title': 'Disponible',
+        'start': f'{target_date}T{rule.start_time}',
+        'end': f'{target_date}T{rule.end_time}',
+        'backgroundColor': '#8BAF8E',
+        'borderColor': '#5C7A5F',
+        'extendedProps': {
+            'type': 'recurring',
+            'rule_id': rule.id,
+            'date': target_date.isoformat(),
+            'start_time': str(rule.start_time),
+            'end_time': str(rule.end_time),
+        },
+    }
+
+
+def _generate_events_for_range(psychologist, start_date, end_date, public=False):
+    """Return FullCalendar event dicts for a psychologist in [start_date, end_date]."""
+    events = []
+
+    # Specific slots
+    slots = Availability.objects.filter(
+        psychologist=psychologist, date__range=[start_date, end_date]
+    ).select_related('appointment__patient')
+
+    booked_keys = set()
+    for slot in slots:
+        if public and slot.is_booked:
+            continue
+        patient_name = None
+        if not public and slot.is_booked:
+            try:
+                patient_name = slot.appointment.patient.get_full_name() or slot.appointment.patient.username
+            except Exception:
+                pass
+        events.append(_slot_event(slot, patient_name))
+        booked_keys.add((slot.date, slot.start_time))
+
+    # Recurring rules
+    rules = RecurringAvailability.objects.filter(psychologist=psychologist, is_active=True)
+    current = start_date
+    while current <= end_date:
+        for rule in rules:
+            if current.weekday() == rule.day_of_week:
+                if (current, rule.start_time) not in booked_keys:
+                    events.append(_recurring_event(rule, current))
+        current += timedelta(days=1)
+
+    return events
+
+
 # ── Calendar endpoints ────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def calendar_events(request):
+    """Logged-in user's own events (psychologist: all slots; patient: their appointments)."""
+    start_date = _parse_date(request.query_params.get('start')) or date.today()
+    end_date = _parse_date(request.query_params.get('end')) or (start_date + timedelta(days=42))
+
+    if request.user.role == User.ROLE_PSYCHOLOGIST:
+        events = _generate_events_for_range(request.user, start_date, end_date)
+    else:
+        events = []
+        appts = Appointment.objects.filter(
+            patient=request.user,
+            availability__date__range=[start_date, end_date],
+        ).select_related('psychologist', 'availability').exclude(status=Appointment.STATUS_CANCELLED)
+
+        color_map = {
+            Appointment.STATUS_PENDING: '#D97706',
+            Appointment.STATUS_CONFIRMED: '#5C7A5F',
+        }
+        for appt in appts:
+            av = appt.availability
+            color = color_map.get(appt.status, '#6B5B47')
+            psych_name = appt.psychologist.get_full_name() or appt.psychologist.username
+            events.append({
+                'id': f'appt_{appt.id}',
+                'title': f'Con {psych_name}',
+                'start': f'{av.date}T{av.start_time}',
+                'end': f'{av.date}T{av.end_time}',
+                'backgroundColor': color,
+                'borderColor': color,
+                'extendedProps': {
+                    'type': 'appointment',
+                    'appointment_id': appt.id,
+                    'status': appt.status,
+                    'psychologist_name': psych_name,
+                },
+            })
+
+    return Response(events)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def psychologist_public_events(request, pk):
+    """Available slots for a specific psychologist (for patient to browse & book)."""
+    start_date = _parse_date(request.query_params.get('start')) or date.today()
+    end_date = _parse_date(request.query_params.get('end')) or (start_date + timedelta(days=42))
+    try:
+        psych = User.objects.get(pk=pk, role=User.ROLE_PSYCHOLOGIST)
+    except User.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    events = _generate_events_for_range(psych, start_date, end_date, public=True)
+    return Response(events)
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-def availability_slots(request):
-    if request.method == 'GET':
-        # Public-ish: anyone logged in can view a psychologist's free slots
-        psych_id = request.query_params.get('psychologist')
-        if not psych_id:
-            return Response({'detail': 'psychologist param requerido.'}, status=status.HTTP_400_BAD_REQUEST)
-        slots = Availability.objects.filter(
-            psychologist_id=psych_id,
-            is_booked=False,
-        )
-        return Response(AvailabilitySerializer(slots, many=True).data)
-
-    # POST — psychologist creates a slot
+def recurring_availability(request):
     if request.user.role != User.ROLE_PSYCHOLOGIST:
-        return Response({'detail': 'Solo psicólogos pueden agregar disponibilidad.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'detail': 'Solo psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
+    if request.method == 'GET':
+        rules = RecurringAvailability.objects.filter(psychologist=request.user)
+        return Response(RecurringAvailabilitySerializer(rules, many=True).data)
+    serializer = RecurringAvailabilitySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    rule = serializer.save(psychologist=request.user)
+    return Response(RecurringAvailabilitySerializer(rule).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def recurring_availability_detail(request, pk):
+    try:
+        rule = RecurringAvailability.objects.get(pk=pk, psychologist=request.user)
+    except RecurringAvailability.DoesNotExist:
+        return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    rule.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def availability_slots(request):
+    """Psychologist creates a specific one-off slot."""
+    if request.user.role != User.ROLE_PSYCHOLOGIST:
+        return Response({'detail': 'Solo psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
     serializer = AvailabilitySerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     slot = serializer.save(psychologist=request.user)
@@ -256,19 +406,9 @@ def availability_slot_detail(request, pk):
     except Availability.DoesNotExist:
         return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
     if slot.is_booked:
-        return Response({'detail': 'No se puede eliminar un turno ya reservado.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'No se puede eliminar un turno reservado.'}, status=status.HTTP_400_BAD_REQUEST)
     slot.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def my_slots(request):
-    """Psychologist's own availability (booked + free)."""
-    if request.user.role != User.ROLE_PSYCHOLOGIST:
-        return Response({'detail': 'Solo psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
-    slots = Availability.objects.filter(psychologist=request.user)
-    return Response(AvailabilitySerializer(slots, many=True).data)
 
 
 @api_view(['GET', 'POST'])
@@ -285,26 +425,83 @@ def appointments(request):
             ).order_by('availability__date', 'availability__start_time')
         return Response(AppointmentSerializer(qs, many=True).data)
 
-    # POST — patient books a slot
+    # POST — patient books a slot (specific or from recurring rule)
     if request.user.role != User.ROLE_PATIENT:
         return Response({'detail': 'Solo pacientes pueden reservar turnos.'}, status=status.HTTP_403_FORBIDDEN)
-    slot_id = request.data.get('slot_id')
+
     notes = request.data.get('notes', '')
-    if not slot_id:
-        return Response({'detail': 'slot_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+    recurring_weeks = int(request.data.get('recurring_weeks', 0))
+
+    # Case A: booking an existing specific slot
+    slot_id = request.data.get('slot_id')
+    if slot_id:
+        try:
+            slot = Availability.objects.select_for_update().get(pk=slot_id, is_booked=False)
+        except Availability.DoesNotExist:
+            return Response({'detail': 'Turno no disponible.'}, status=status.HTTP_400_BAD_REQUEST)
+        rid = uuid.uuid4() if recurring_weeks else None
+        slot.is_booked = True
+        slot.save()
+        appt = Appointment.objects.create(
+            patient=request.user, psychologist=slot.psychologist,
+            availability=slot, notes=notes, recurring_id=rid,
+        )
+        created = [appt]
+
+        # Generate recurring follow-ups
+        if recurring_weeks:
+            for w in range(1, recurring_weeks):
+                next_date = slot.date + timedelta(weeks=w)
+                next_slot, _ = Availability.objects.get_or_create(
+                    psychologist=slot.psychologist, date=next_date,
+                    start_time=slot.start_time,
+                    defaults={'end_time': slot.end_time},
+                )
+                if not next_slot.is_booked:
+                    next_slot.is_booked = True
+                    next_slot.save()
+                    Appointment.objects.create(
+                        patient=request.user, psychologist=slot.psychologist,
+                        availability=next_slot, notes=notes, recurring_id=rid,
+                    )
+        return Response(AppointmentSerializer(created[0]).data, status=status.HTTP_201_CREATED)
+
+    # Case B: booking a recurring-rule virtual slot
+    psych_id = request.data.get('psychologist_id')
+    slot_date = request.data.get('date')
+    start_time = request.data.get('start_time')
+    end_time = request.data.get('end_time')
+    if not all([psych_id, slot_date, start_time, end_time]):
+        return Response({'detail': 'Faltan datos para reservar.'}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        slot = Availability.objects.select_for_update().get(pk=slot_id, is_booked=False)
-    except Availability.DoesNotExist:
-        return Response({'detail': 'Turno no disponible.'}, status=status.HTTP_400_BAD_REQUEST)
-    slot.is_booked = True
-    slot.save()
-    appt = Appointment.objects.create(
-        patient=request.user,
-        psychologist=slot.psychologist,
-        availability=slot,
-        notes=notes,
-    )
-    return Response(AppointmentSerializer(appt).data, status=status.HTTP_201_CREATED)
+        psych = User.objects.get(pk=psych_id, role=User.ROLE_PSYCHOLOGIST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Psicólogo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    rid = uuid.uuid4() if recurring_weeks else None
+    created = []
+    base_date = datetime.fromisoformat(slot_date).date()
+    weeks = max(1, recurring_weeks)
+
+    for w in range(weeks):
+        target = base_date + timedelta(weeks=w)
+        slot, _ = Availability.objects.get_or_create(
+            psychologist=psych, date=target, start_time=start_time,
+            defaults={'end_time': end_time},
+        )
+        if slot.is_booked:
+            continue
+        slot.is_booked = True
+        slot.save()
+        created.append(Appointment.objects.create(
+            patient=request.user, psychologist=psych,
+            availability=slot, notes=notes, recurring_id=rid,
+        ))
+
+    if not created:
+        return Response({'detail': 'No se pudo reservar ningún turno.'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(AppointmentSerializer(created[0]).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['PATCH'])

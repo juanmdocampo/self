@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchMe, updateProfile, uploadAvatar, uploadDocument, fetchMySlots, createSlot, deleteSlot } from '../api'
+import { fetchMe, updateProfile, uploadAvatar, uploadDocument, fetchRecurringRules, createRecurringRule, deleteRecurringRule } from '../api'
 
 const SPECIALTIES = [
   'TCC', 'Psicoanálisis', 'Gestalt', 'Sistémica', 'ACT',
@@ -96,25 +96,27 @@ function VerificationBanner({ profile, onUpload, uploading }) {
   )
 }
 
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
 function AvailabilitySection({ token }) {
   const { showToast } = useToast()
-  const [slots, setSlots] = useState([])
-  const [form, setForm] = useState({ date: '', start_time: '', end_time: '' })
+  const [rules, setRules] = useState([])
+  const [form, setForm] = useState({ day_of_week: '0', start_time: '', end_time: '' })
   const [adding, setAdding] = useState(false)
   const [deleting, setDeleting] = useState(null)
 
   useEffect(() => {
-    fetchMySlots(token).then(setSlots)
+    fetchRecurringRules(token).then(setRules)
   }, [token])
 
   async function handleAdd(e) {
     e.preventDefault()
     setAdding(true)
     try {
-      const slot = await createSlot(token, form)
-      setSlots(prev => [...prev, slot].sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time)))
-      setForm({ date: '', start_time: '', end_time: '' })
-      showToast('Turno agregado ✓')
+      const rule = await createRecurringRule(token, form)
+      setRules(prev => [...prev, rule].sort((a, b) => a.day_of_week - b.day_of_week))
+      setForm({ day_of_week: '0', start_time: '', end_time: '' })
+      showToast('Disponibilidad recurrente agregada ✓')
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -122,12 +124,12 @@ function AvailabilitySection({ token }) {
     }
   }
 
-  async function handleDelete(slotId) {
-    setDeleting(slotId)
+  async function handleDelete(ruleId) {
+    setDeleting(ruleId)
     try {
-      await deleteSlot(token, slotId)
-      setSlots(prev => prev.filter(s => s.id !== slotId))
-      showToast('Turno eliminado.')
+      await deleteRecurringRule(token, ruleId)
+      setRules(prev => prev.filter(r => r.id !== ruleId))
+      showToast('Regla eliminada.')
     } catch (err) {
       showToast(err.message)
     } finally {
@@ -135,86 +137,55 @@ function AvailabilitySection({ token }) {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
-
   return (
     <div className="mt-10 pt-8 border-t border-warm-border/50">
-      <h3 className="font-medium text-warm-dark mb-1">Disponibilidad</h3>
-      <p className="text-xs text-warm-mid mb-5">Agregá los turnos disponibles para que los pacientes puedan reservar.</p>
+      <h3 className="font-medium text-warm-dark mb-1">Disponibilidad recurrente</h3>
+      <p className="text-xs text-warm-mid mb-5">
+        Definí tu horario habitual. Los turnos de esta regla aparecerán automáticamente en tu calendario.
+        También podés agregar turnos puntuales desde el <a href="/calendar" className="text-sage-dark underline">Calendario</a>.
+      </p>
 
-      {/* Add slot form */}
       <form onSubmit={handleAdd} className="flex flex-wrap gap-3 items-end mb-6">
         <div className="flex flex-col gap-1">
-          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Fecha</label>
-          <input
-            type="date"
-            min={today}
-            required
-            value={form.date}
-            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Día</label>
+          <select
             className={inputCls}
-          />
+            value={form.day_of_week}
+            onChange={e => setForm(f => ({ ...f, day_of_week: e.target.value }))}
+          >
+            {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+          </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora inicio</label>
-          <input
-            type="time"
-            required
-            value={form.start_time}
-            onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
-            className={inputCls}
-          />
+          <input type="time" required className={inputCls} value={form.start_time}
+            onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Hora fin</label>
-          <input
-            type="time"
-            required
-            value={form.end_time}
-            onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
-            className={inputCls}
-          />
+          <input type="time" required className={inputCls} value={form.end_time}
+            onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
         </div>
-        <button
-          type="submit"
-          disabled={adding}
-          className="px-5 py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60"
-        >
+        <button type="submit" disabled={adding}
+          className="px-5 py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60">
           {adding ? 'Agregando...' : '+ Agregar'}
         </button>
       </form>
 
-      {/* Slots list */}
-      {slots.length === 0 ? (
-        <p className="text-sm text-warm-mid">No tenés turnos cargados todavía.</p>
+      {rules.length === 0 ? (
+        <p className="text-sm text-warm-mid">No tenés disponibilidad recurrente configurada.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {slots.map(slot => {
-            const dateLabel = new Date(slot.date + 'T00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
-            return (
-              <div
-                key={slot.id}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm ${
-                  slot.is_booked
-                    ? 'bg-sage/[0.06] border-sage/30 text-sage-dark'
-                    : 'bg-card-bg border-warm-dark/[0.08] text-warm-dark'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-medium capitalize">{dateLabel}</span>
-                  <span className="text-warm-mid">{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</span>
-                  {slot.is_booked && <span className="text-xs bg-sage/20 text-sage-dark px-2 py-0.5 rounded-full font-medium">Reservado</span>}
-                </div>
-                {!slot.is_booked && (
-                  <button
-                    onClick={() => handleDelete(slot.id)}
-                    disabled={deleting === slot.id}
-                    className="text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40"
-                  >✕</button>
-                )}
+          {rules.map(rule => (
+            <div key={rule.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-card-bg border border-warm-dark/[0.08] text-sm">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-warm-dark">{DAY_NAMES[rule.day_of_week]}</span>
+                <span className="text-warm-mid">{rule.start_time.slice(0, 5)} – {rule.end_time.slice(0, 5)}</span>
               </div>
-            )
-          })}
+              <button onClick={() => handleDelete(rule.id)} disabled={deleting === rule.id}
+                className="text-xs text-warm-mid hover:text-red-500 transition-colors disabled:opacity-40">✕</button>
+            </div>
+          ))}
         </div>
       )}
     </div>

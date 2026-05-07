@@ -19,9 +19,12 @@ urlpatterns = [
     path('favorites/<int:pk>/', views.delete_favorite),
 
     # Calendar
+    path('calendar/events/', views.calendar_events),
+    path('calendar/events/psychologist/<int:pk>/', views.psychologist_public_events),
     path('calendar/slots/', views.availability_slots),
-    path('calendar/slots/mine/', views.my_slots),
     path('calendar/slots/<int:pk>/', views.availability_slot_detail),
+    path('calendar/recurring/', views.recurring_availability),
+    path('calendar/recurring/<int:pk>/', views.recurring_availability_detail),
     path('calendar/appointments/', views.appointments),
     path('calendar/appointments/<int:pk>/', views.appointment_detail),
 

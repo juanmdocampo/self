@@ -96,6 +96,26 @@ class Favorite(models.Model):
         return f'Favorite: {self.patient.username} ↔ {self.psychologist.username}'
 
 
+class RecurringAvailability(models.Model):
+    DAYS = [
+        (0, 'Lunes'), (1, 'Martes'), (2, 'Miércoles'),
+        (3, 'Jueves'), (4, 'Viernes'), (5, 'Sábado'), (6, 'Domingo'),
+    ]
+
+    psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recurring_availability')
+    day_of_week = models.IntegerField(choices=DAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('psychologist', 'day_of_week', 'start_time')
+
+    def __str__(self):
+        day = dict(self.DAYS)[self.day_of_week]
+        return f'{self.psychologist.username} — {day} {self.start_time}–{self.end_time}'
+
+
 class Availability(models.Model):
     psychologist = models.ForeignKey(User, on_delete=models.CASCADE, related_name='availability_slots')
     date = models.DateField()
@@ -126,6 +146,7 @@ class Appointment(models.Model):
     availability = models.OneToOneField(Availability, on_delete=models.CASCADE, related_name='appointment')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     notes = models.TextField(blank=True)
+    recurring_id = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

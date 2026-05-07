@@ -1,183 +1,294 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import esLocale from '@fullcalendar/core/locales/es'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchAppointments, updateAppointment } from '../api'
+import {
+  fetchCalendarEvents, createSlot, deleteSlot,
+  fetchAppointments, updateAppointment,
+} from '../api'
 
-const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
+// ── Modals ────────────────────────────────────────────────────────────────────
 
-const STATUS_LABEL = {
-  pending: { label: 'Pendiente', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  confirmed: { label: 'Confirmado', cls: 'bg-green-50 text-green-700 border-green-200' },
-  cancelled: { label: 'Cancelado', cls: 'bg-red-50 text-red-600 border-red-200' },
-}
-
-function formatDate(dateStr) {
-  return new Date(dateStr + 'T00:00').toLocaleDateString('es-AR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
-}
-
-function AppointmentCard({ appt, isPatient, onUpdateStatus, updating }) {
-  const other = isPatient ? appt.psychologist : appt.patient
-  const name = [other.first_name, other.last_name].filter(Boolean).join(' ') || other.username
-  const avatar = AVATARS[other.id % AVATARS.length]
-  const { date, start_time, end_time } = appt.availability
-  const status = STATUS_LABEL[appt.status] || STATUS_LABEL.pending
-
+function Modal({ title, onClose, children }) {
   return (
-    <div className="bg-card-bg rounded-2xl p-5 border border-warm-dark/[0.06] shadow-sm">
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-xl border-2 border-sage">
-          {other.avatar
-            ? <img src={other.avatar} alt={name} className="w-full h-full object-cover" />
-            : avatar
-          }
+    <div
+      className="fixed inset-0 z-[700] bg-warm-dark/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-cream rounded-2xl w-full max-w-sm shadow-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-serif text-lg font-bold text-warm-dark">{title}</h3>
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-warm-dark/[0.08] text-warm-mid hover:text-warm-dark flex items-center justify-center text-sm">×</button>
         </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 flex-wrap">
-            <div>
-              <div className="font-medium text-warm-dark">{name}</div>
-              <div className="text-xs text-warm-mid mt-0.5 capitalize">{formatDate(date)}</div>
-              <div className="text-xs text-warm-mid">{start_time.slice(0, 5)} – {end_time.slice(0, 5)}</div>
-            </div>
-            <span className={`text-xs px-2.5 py-1 rounded-full border font-medium flex-shrink-0 ${status.cls}`}>
-              {status.label}
-            </span>
-          </div>
-
-          {appt.notes && (
-            <p className="text-xs text-warm-mid mt-2 italic">"{appt.notes}"</p>
-          )}
-
-          {/* Actions */}
-          {appt.status !== 'cancelled' && (
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {!isPatient && appt.status === 'pending' && (
-                <button
-                  onClick={() => onUpdateStatus(appt.id, 'confirmed')}
-                  disabled={updating === appt.id}
-                  className="px-3 py-1.5 rounded-full bg-sage-dark text-white text-xs font-medium hover:bg-sage transition-all disabled:opacity-60"
-                >
-                  Confirmar
-                </button>
-              )}
-              <button
-                onClick={() => onUpdateStatus(appt.id, 'cancelled')}
-                disabled={updating === appt.id}
-                className="px-3 py-1.5 rounded-full border border-warm-dark/20 text-warm-mid text-xs font-medium hover:border-red-400 hover:text-red-500 transition-all disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-            </div>
-          )}
-        </div>
+        {children}
       </div>
     </div>
   )
 }
 
+const inputCls = 'px-3 py-2.5 rounded-xl border border-warm-dark/[0.15] bg-white text-sm text-warm-dark outline-none focus:border-sage-dark transition-colors w-full'
+
+// ── Psychologist add-slot modal ───────────────────────────────────────────────
+
+function AddSlotModal({ date, startTime, endTime, onSave, onClose, saving }) {
+  const [form, setForm] = useState({
+    date: date || '',
+    start_time: startTime || '',
+    end_time: endTime || '',
+  })
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    onSave(form)
+  }
+
+  return (
+    <Modal title="Agregar disponibilidad" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <div>
+          <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">Fecha</label>
+          <input type="date" required className={inputCls} value={form.date}
+            onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">Inicio</label>
+            <input type="time" required className={inputCls} value={form.start_time}
+              onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
+          </div>
+          <div>
+            <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-1">Fin</label>
+            <input type="time" required className={inputCls} value={form.end_time}
+              onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
+          </div>
+        </div>
+        <button type="submit" disabled={saving}
+          className="w-full py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60 mt-1">
+          {saving ? 'Guardando...' : 'Guardar turno'}
+        </button>
+      </form>
+    </Modal>
+  )
+}
+
+// ── Slot detail modal (psychologist) ─────────────────────────────────────────
+
+function SlotDetailModal({ event, onDelete, onClose, deleting }) {
+  const props = event.extendedProps
+  const isBooked = props.type === 'booked'
+  return (
+    <Modal title={isBooked ? 'Turno reservado' : 'Turno disponible'} onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <div className="bg-card-bg rounded-xl p-3 text-sm">
+          <div className="font-medium text-warm-dark">{event.title}</div>
+          <div className="text-warm-mid text-xs mt-1">
+            {new Date(event.start).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+          <div className="text-warm-mid text-xs">
+            {new Date(event.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+            {' – '}
+            {new Date(event.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+        {!isBooked && (
+          <button onClick={() => onDelete(props.slot_id)} disabled={deleting}
+            className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
+            {deleting ? 'Eliminando...' : 'Eliminar turno'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+// ── Appointment detail modal (patient) ───────────────────────────────────────
+
+function AppointmentDetailModal({ event, onCancel, onClose, cancelling }) {
+  const props = event.extendedProps
+  const statusLabel = { pending: 'Pendiente', confirmed: 'Confirmado', cancelled: 'Cancelado' }
+  const statusCls = { pending: 'text-amber-600', confirmed: 'text-green-600', cancelled: 'text-red-500' }
+  return (
+    <Modal title="Tu turno" onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <div className="bg-card-bg rounded-xl p-3 text-sm">
+          <div className="font-medium text-warm-dark">{event.title}</div>
+          <div className="text-warm-mid text-xs mt-1">
+            {new Date(event.start).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+          <div className="text-warm-mid text-xs">
+            {new Date(event.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+            {' – '}
+            {new Date(event.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+          <div className={`text-xs font-medium mt-2 ${statusCls[props.status]}`}>
+            {statusLabel[props.status]}
+          </div>
+        </div>
+        {props.status !== 'cancelled' && (
+          <button onClick={() => onCancel(props.appointment_id)} disabled={cancelling}
+            className="w-full py-2.5 rounded-xl border border-red-300 text-red-500 text-sm font-medium hover:bg-red-50 transition-all disabled:opacity-60">
+            {cancelling ? 'Cancelando...' : 'Cancelar turno'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function Calendar() {
   const { token, currentUser } = useAuth()
   const { showToast } = useToast()
-  const [appointments, setAppointments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const calendarRef = useRef(null)
+  const isPsychologist = currentUser?.role === 'psychologist'
 
-  const isPatient = currentUser?.role === 'patient'
+  const [addModal, setAddModal] = useState(null)   // { date, startTime, endTime }
+  const [detailEvent, setDetailEvent] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
-  const load = useCallback(async () => {
-    if (!token) return
-    const data = await fetchAppointments(token)
-    setAppointments(data)
-    setLoading(false)
+  const fetchEvents = useCallback(async (info, successCb, failureCb) => {
+    try {
+      const data = await fetchCalendarEvents(token, info.startStr, info.endStr)
+      successCb(data)
+    } catch {
+      failureCb()
+    }
   }, [token])
 
-  useEffect(() => { load() }, [load])
+  // Psychologist clicks empty date/time → open add-slot modal
+  function handleDateSelect(info) {
+    if (!isPsychologist) return
+    const startTime = info.startStr.includes('T')
+      ? info.startStr.slice(11, 16)
+      : ''
+    const endTime = info.endStr?.includes('T')
+      ? info.endStr.slice(11, 16)
+      : ''
+    setAddModal({
+      date: info.startStr.slice(0, 10),
+      startTime,
+      endTime,
+    })
+  }
 
-  async function handleUpdateStatus(apptId, newStatus) {
-    setUpdating(apptId)
+  function handleEventClick(info) {
+    setDetailEvent(info.event)
+  }
+
+  async function handleAddSlot(form) {
+    setSaving(true)
     try {
-      const updated = await updateAppointment(token, apptId, newStatus)
-      setAppointments(prev => prev.map(a => a.id === apptId ? updated : a))
-      showToast(newStatus === 'confirmed' ? 'Turno confirmado ✓' : 'Turno cancelado.')
+      await createSlot(token, form)
+      calendarRef.current?.getApi().refetchEvents()
+      setAddModal(null)
+      showToast('Turno agregado ✓')
     } catch (err) {
       showToast(err.message)
     } finally {
-      setUpdating(null)
+      setSaving(false)
     }
   }
 
-  const filtered = filter === 'all'
-    ? appointments
-    : appointments.filter(a => a.status === filter)
+  async function handleDeleteSlot(slotId) {
+    setDeleting(true)
+    try {
+      await deleteSlot(token, slotId)
+      calendarRef.current?.getApi().refetchEvents()
+      setDetailEvent(null)
+      showToast('Turno eliminado.')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
-  const upcoming = filtered.filter(a => a.status !== 'cancelled')
-  const past = filtered.filter(a => a.status === 'cancelled')
+  async function handleCancelAppointment(apptId) {
+    setCancelling(true)
+    try {
+      await updateAppointment(token, apptId, 'cancelled')
+      calendarRef.current?.getApi().refetchEvents()
+      setDetailEvent(null)
+      showToast('Turno cancelado.')
+    } catch (err) {
+      showToast(err.message)
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
-      <div className="mb-8">
-        <h1 className="font-serif text-4xl font-bold">
-          {isPatient ? 'Mis turnos' : 'Mi agenda'}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div className="mb-6">
+        <h1 className="font-serif text-3xl font-bold text-warm-dark">
+          {isPsychologist ? 'Mi agenda' : 'Mis turnos'}
         </h1>
-        <p className="text-warm-mid mt-2 text-sm">
-          {isPatient
-            ? 'Tus reservas con psicólogos.'
-            : 'Los turnos reservados por tus pacientes.'}
+        <p className="text-warm-mid text-sm mt-1">
+          {isPsychologist
+            ? 'Hacé clic en un día o franja horaria para agregar disponibilidad.'
+            : 'Tus turnos reservados con psicólogos.'}
         </p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {[
-          { key: 'all', label: 'Todos' },
-          { key: 'pending', label: 'Pendientes' },
-          { key: 'confirmed', label: 'Confirmados' },
-          { key: 'cancelled', label: 'Cancelados' },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              filter === f.key
-                ? 'bg-warm-dark text-cream'
-                : 'bg-card-bg border border-warm-dark/[0.08] text-warm-mid hover:text-warm-dark'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="bg-white rounded-2xl border border-warm-dark/[0.08] shadow-sm overflow-hidden [&_.fc]:font-sans [&_.fc-button]:!rounded-lg [&_.fc-button-primary]:!bg-warm-dark [&_.fc-button-primary]:!border-warm-dark [&_.fc-button-primary.fc-button-active]:!bg-sage-dark [&_.fc-button-primary.fc-button-active]:!border-sage-dark [&_.fc-today-button]:!bg-sage [&_.fc-today-button]:!border-sage [&_.fc-daygrid-day.fc-day-today]:!bg-sage/10 [&_.fc-timegrid-now-indicator-line]:!border-sage-dark p-3 sm:p-5">
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          locale={esLocale}
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+          }}
+          height="auto"
+          selectable={isPsychologist}
+          selectMirror={isPsychologist}
+          events={fetchEvents}
+          select={handleDateSelect}
+          eventClick={handleEventClick}
+          slotMinTime="07:00:00"
+          slotMaxTime="22:00:00"
+          allDaySlot={false}
+          nowIndicator
+          eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: false }}
+        />
       </div>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-warm-mid">
-          <div className="text-4xl">⏳</div>
-          <div>Cargando turnos...</div>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 text-warm-mid text-center">
-          <div className="text-5xl">📅</div>
-          <div className="font-medium">No tenés turnos todavía.</div>
-          <div className="text-sm">
-            {isPatient
-              ? 'Explorá perfiles de psicólogos y reservá un turno.'
-              : 'Agregá tu disponibilidad en tu perfil para que los pacientes puedan reservar.'}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map(appt => (
-            <AppointmentCard
-              key={appt.id}
-              appt={appt}
-              isPatient={isPatient}
-              onUpdateStatus={handleUpdateStatus}
-              updating={updating}
-            />
-          ))}
-        </div>
+      {addModal && (
+        <AddSlotModal
+          date={addModal.date}
+          startTime={addModal.startTime}
+          endTime={addModal.endTime}
+          onSave={handleAddSlot}
+          onClose={() => setAddModal(null)}
+          saving={saving}
+        />
+      )}
+
+      {detailEvent && isPsychologist && (
+        <SlotDetailModal
+          event={detailEvent}
+          onDelete={handleDeleteSlot}
+          onClose={() => setDetailEvent(null)}
+          deleting={deleting}
+        />
+      )}
+
+      {detailEvent && !isPsychologist && (
+        <AppointmentDetailModal
+          event={detailEvent}
+          onCancel={handleCancelAppointment}
+          onClose={() => setDetailEvent(null)}
+          cancelling={cancelling}
+        />
       )}
     </div>
   )

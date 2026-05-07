@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import esLocale from '@fullcalendar/core/locales/es'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchPsychologist, swipeAction, fetchPublicSlots, bookAppointment } from '../api'
+import { fetchPsychologist, swipeAction, fetchPsychologistPublicEvents, bookAppointment } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online y Presencial' }
@@ -17,32 +22,62 @@ export default function PsychProfile() {
   const [loading, setLoading] = useState(true)
   const [liked, setLiked] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
-  const [slots, setSlots] = useState([])
-  const [bookingSlot, setBookingSlot] = useState(null)
+  const [bookModal, setBookModal] = useState(null)  // { event }
+  const [bookingSlot, setBookingSlot] = useState(false)
+  const [recurringWeeks, setRecurringWeeks] = useState(0)
+
+  const calendarRef = useRef(null)
 
   useEffect(() => {
     fetchPsychologist(token, id)
       .then(data => {
         setPsych(data)
         setLiked(data.swipe_status === 'like')
-        fetchPublicSlots(token, id).then(setSlots)
       })
       .catch(() => navigate('/discover'))
       .finally(() => setLoading(false))
   }, [id, token, navigate])
 
-  async function handleBook(slotId) {
-    if (!token) { openLoginModal(); return }
-    if (bookingSlot) return
-    setBookingSlot(slotId)
+  const fetchEvents = useCallback(async (info, successCb, failureCb) => {
     try {
-      await bookAppointment(token, slotId)
-      setSlots(prev => prev.filter(s => s.id !== slotId))
-      showToast('¡Turno reservado! Revisá tu calendario.')
+      const data = await fetchPsychologistPublicEvents(token, id, info.startStr, info.endStr)
+      successCb(data)
+    } catch {
+      failureCb()
+    }
+  }, [token, id])
+
+  function handleEventClick(info) {
+    if (!token) { openLoginModal(); return }
+    if (currentUser?.role === 'psychologist') return
+    setBookModal({ event: info.event })
+    setRecurringWeeks(0)
+  }
+
+  async function handleBook() {
+    if (!token || bookingSlot) return
+    setBookingSlot(true)
+    const props = bookModal.event.extendedProps
+    try {
+      const payload = props.type === 'available'
+        ? { slot_id: props.slot_id, recurring_weeks: recurringWeeks }
+        : {
+            psychologist_id: psych.id,
+            date: props.date,
+            start_time: props.start_time,
+            end_time: props.end_time,
+            recurring_weeks: recurringWeeks,
+          }
+      await bookAppointment(token, payload)
+      calendarRef.current?.getApi().refetchEvents()
+      setBookModal(null)
+      showToast(recurringWeeks > 0
+        ? `¡${recurringWeeks} turnos reservados! Revisá tu calendario.`
+        : '¡Turno reservado! Revisá tu calendario.')
     } catch (err) {
       showToast(err.message)
     } finally {
-      setBookingSlot(null)
+      setBookingSlot(false)
     }
   }
 
@@ -174,29 +209,78 @@ export default function PsychProfile() {
         </div>
       )}
 
-      {/* Available slots */}
-      {slots.length > 0 && (
+      {/* Booking calendar — only shown to patients */}
+      {(!currentUser || currentUser.role === 'patient') && (
         <div className="mb-8">
-          <h2 className="text-xs text-warm-mid uppercase tracking-wider font-medium mb-3">Turnos disponibles</h2>
-          <div className="flex flex-col gap-2">
-            {slots.map(slot => {
-              const dateLabel = new Date(slot.date + 'T00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-              return (
-                <div key={slot.id} className="flex items-center justify-between bg-card-bg rounded-xl px-4 py-3 border border-warm-dark/[0.06]">
-                  <div>
-                    <span className="text-sm font-medium text-warm-dark capitalize">{dateLabel}</span>
-                    <span className="text-xs text-warm-mid ml-3">{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</span>
-                  </div>
-                  <button
-                    onClick={() => handleBook(slot.id)}
-                    disabled={bookingSlot === slot.id}
-                    className="px-4 py-1.5 rounded-full bg-sage-dark text-white text-xs font-medium hover:bg-sage transition-all disabled:opacity-60"
-                  >
-                    {bookingSlot === slot.id ? 'Reservando...' : 'Reservar'}
-                  </button>
-                </div>
-              )
-            })}
+          <h2 className="text-xs text-warm-mid uppercase tracking-wider font-medium mb-3">Reservar turno</h2>
+          <div className="bg-white rounded-2xl border border-warm-dark/[0.08] overflow-hidden [&_.fc]:font-sans [&_.fc-button-primary]:!bg-warm-dark [&_.fc-button-primary]:!border-warm-dark [&_.fc-button-primary.fc-button-active]:!bg-sage-dark [&_.fc-button-primary.fc-button-active]:!border-sage-dark [&_.fc-today-button]:!bg-sage [&_.fc-today-button]:!border-sage [&_.fc-daygrid-day.fc-day-today]:!bg-sage/10 p-3">
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="timeGridWeek"
+              locale={esLocale}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay',
+              }}
+              height="auto"
+              events={fetchEvents}
+              eventClick={handleEventClick}
+              slotMinTime="07:00:00"
+              slotMaxTime="22:00:00"
+              allDaySlot={false}
+              nowIndicator
+              eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: false }}
+            />
+          </div>
+          <p className="text-xs text-warm-mid mt-2">Hacé clic en un turno disponible para reservarlo.</p>
+        </div>
+      )}
+
+      {/* Book modal */}
+      {bookModal && (
+        <div
+          className="fixed inset-0 z-[700] bg-warm-dark/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setBookModal(null) }}
+        >
+          <div className="bg-cream rounded-2xl w-full max-w-sm shadow-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-serif text-lg font-bold text-warm-dark">Reservar turno</h3>
+              <button onClick={() => setBookModal(null)} className="w-7 h-7 rounded-full bg-warm-dark/[0.08] text-warm-mid flex items-center justify-center text-sm">×</button>
+            </div>
+            <div className="bg-card-bg rounded-xl p-3 mb-4 text-sm">
+              <div className="text-warm-mid text-xs">
+                {new Date(bookModal.event.start).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </div>
+              <div className="font-medium text-warm-dark mt-0.5">
+                {new Date(bookModal.event.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                {' – '}
+                {new Date(bookModal.event.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider block mb-2">
+                ¿Reservar de forma recurrente?
+              </label>
+              <select
+                value={recurringWeeks}
+                onChange={e => setRecurringWeeks(Number(e.target.value))}
+                className="px-3 py-2.5 rounded-xl border border-warm-dark/[0.15] bg-white text-sm text-warm-dark outline-none focus:border-sage-dark w-full"
+              >
+                <option value={0}>Solo este turno</option>
+                <option value={4}>4 semanas</option>
+                <option value={8}>8 semanas</option>
+                <option value={12}>12 semanas</option>
+              </select>
+            </div>
+            <button
+              onClick={handleBook}
+              disabled={bookingSlot}
+              className="w-full py-3 rounded-xl bg-warm-dark text-cream text-sm font-medium hover:opacity-90 transition-all disabled:opacity-60"
+            >
+              {bookingSlot ? 'Reservando...' : recurringWeeks > 0 ? `Reservar ${recurringWeeks} turnos` : 'Confirmar reserva'}
+            </button>
           </div>
         </div>
       )}
