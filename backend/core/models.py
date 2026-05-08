@@ -109,6 +109,7 @@ class RecurringAvailability(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     is_active = models.BooleanField(default=True)
+    cancelled_dates = models.JSONField(default=list)
 
     class Meta:
         unique_together = ('psychologist', 'day_of_week', 'start_time')

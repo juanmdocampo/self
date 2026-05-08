@@ -190,6 +190,17 @@ export async function deleteRecurringRule(token, ruleId) {
   if (!res.ok) throw new Error('Error al eliminar regla.')
 }
 
+export async function cancelRecurringRuleDate(token, ruleId, date) {
+  const res = await fetch(`${BASE}/calendar/recurring/${ruleId}/`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ cancel_date: date }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.detail || 'Error al cancelar.')
+  return json
+}
+
 export async function fetchAppointments(token) {
   const res = await fetch(`${BASE}/calendar/appointments/`, { headers: authHeaders(token) })
   if (!res.ok) return []

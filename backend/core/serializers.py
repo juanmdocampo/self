@@ -167,7 +167,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 class RecurringAvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = RecurringAvailability
-        fields = ['id', 'day_of_week', 'start_time', 'end_time', 'is_active']
+        fields = ['id', 'day_of_week', 'start_time', 'end_time', 'is_active', 'cancelled_dates']
 
 
 class AvailabilitySerializer(serializers.ModelSerializer):

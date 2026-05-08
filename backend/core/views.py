@@ -232,15 +232,21 @@ def _parse_date(s):
     return datetime.fromisoformat(s[:10]).date() if s else None
 
 
+_C_AVAILABLE = '#8BAF8E'
+_C_PENDING   = '#F59E0B'
+_C_CONFIRMED = '#EA580C'
+_C_REJECTED  = '#9CA3AF'
+
+
 def _slot_event(slot, patient_name=None, appt_status=None, appt_id=None):
     if appt_status == Appointment.STATUS_PENDING:
-        color = '#D97706'
+        color = _C_PENDING
         title = f'Pendiente — {patient_name}' if patient_name else 'Pendiente'
     elif appt_status == Appointment.STATUS_CONFIRMED:
-        color = '#2C2416'
-        title = f'Confirmado — {patient_name}' if patient_name else 'Confirmado'
+        color = _C_CONFIRMED
+        title = f'Reservado — {patient_name}' if patient_name else 'Reservado'
     else:
-        color = '#8BAF8E'
+        color = _C_AVAILABLE
         title = 'Disponible'
     return {
         'id': f'slot_{slot.id}',
@@ -264,8 +270,8 @@ def _recurring_event(rule, target_date):
         'title': 'Disponible',
         'start': f'{target_date}T{rule.start_time}',
         'end': f'{target_date}T{rule.end_time}',
-        'backgroundColor': '#8BAF8E',
-        'borderColor': '#5C7A5F',
+        'backgroundColor': _C_AVAILABLE,
+        'borderColor': _C_AVAILABLE,
         'extendedProps': {
             'type': 'recurring',
             'rule_id': rule.id,
@@ -322,7 +328,7 @@ def _generate_events_for_range(psychologist, start_date, end_date, public=False)
                 rb_blocked[key].update(rb.cancelled_dates)
 
         if not public:
-            color = '#D97706' if rb.status == RecurringBooking.STATUS_PENDING else '#5C7A5F'
+            color = _C_PENDING if rb.status == RecurringBooking.STATUS_PENDING else _C_CONFIRMED
             patient_name = rb.patient.get_full_name() or rb.patient.username
             label = (f'Pendiente — {patient_name}' if rb.status == RecurringBooking.STATUS_PENDING
                      else f'Recurrente — {patient_name}')
@@ -356,11 +362,12 @@ def _generate_events_for_range(psychologist, start_date, end_date, public=False)
         for rule in rules:
             if current.weekday() != rule.day_of_week:
                 continue
+            if current.isoformat() in rule.cancelled_dates:
+                continue  # explicitly cancelled occurrence
             if (current, rule.start_time) in booked_keys:
                 continue
             if (current, rule.start_time) in rb_suppress:
                 continue
-            # In public view: hide if a confirmed recurring booking covers this occurrence
             rb_key = (rule.day_of_week, rule.start_time)
             if public and rb_key in rb_blocked:
                 if current.isoformat() not in rb_blocked[rb_key]:
@@ -390,9 +397,9 @@ def calendar_events(request):
         ).select_related('psychologist', 'availability').exclude(status=Appointment.STATUS_CANCELLED)
 
         color_map = {
-            Appointment.STATUS_PENDING: '#D97706',
-            Appointment.STATUS_CONFIRMED: '#5C7A5F',
-            Appointment.STATUS_REJECTED: '#EF4444',
+            Appointment.STATUS_PENDING:   _C_PENDING,
+            Appointment.STATUS_CONFIRMED: _C_CONFIRMED,
+            Appointment.STATUS_REJECTED:  _C_REJECTED,
         }
         status_labels = {
             Appointment.STATUS_PENDING: 'Pendiente',
@@ -422,8 +429,8 @@ def calendar_events(request):
 
         # RecurringBooking virtual events
         rb_color_map = {
-            RecurringBooking.STATUS_PENDING: '#D97706',
-            RecurringBooking.STATUS_CONFIRMED: '#5C7A5F',
+            RecurringBooking.STATUS_PENDING:   _C_PENDING,
+            RecurringBooking.STATUS_CONFIRMED: _C_CONFIRMED,
         }
         rb_qs = RecurringBooking.objects.filter(
             patient=request.user,
@@ -483,13 +490,21 @@ def recurring_availability(request):
     return Response(RecurringAvailabilitySerializer(rule).data, status=status.HTTP_201_CREATED)
 
 
-@api_view(['DELETE'])
+@api_view(['DELETE', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def recurring_availability_detail(request, pk):
     try:
         rule = RecurringAvailability.objects.get(pk=pk, psychologist=request.user)
     except RecurringAvailability.DoesNotExist:
         return Response({'detail': 'No encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == 'PATCH':
+        cancel_date = request.data.get('cancel_date')
+        if not cancel_date:
+            return Response({'detail': 'cancel_date requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        if cancel_date not in rule.cancelled_dates:
+            rule.cancelled_dates.append(cancel_date)
+            rule.save()
+        return Response(RecurringAvailabilitySerializer(rule).data)
     rule.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
