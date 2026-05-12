@@ -42,9 +42,35 @@ class AdminPsychologistProfileSerializer(serializers.ModelSerializer):
 
 
 def _resolve_file_url(value, request):
-    """Return value as-is if it's already a full URL, otherwise build a local media URL."""
+    """Generate a presigned S3 GET URL if S3 is configured, otherwise build a local media URL."""
     if not value:
         return None
+
+    from django.conf import settings
+    if getattr(settings, 'AWS_ACCESS_KEY_ID', None):
+        import boto3
+        # Normalize to key: strip full S3 path-style prefix if stored as full URL
+        key = str(value)
+        prefix = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/"
+        if key.startswith(prefix):
+            key = key[len(prefix):]
+        # If it's still a full URL (unknown format), return as-is
+        if key.startswith('http'):
+            return key
+        s3 = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+        return s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': key},
+            ExpiresIn=60 * 60 * 24,  # 24 hours
+        )
+
+    # Local storage fallback
     if str(value).startswith('http'):
         return str(value)
     if request:

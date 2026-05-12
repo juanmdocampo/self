@@ -77,12 +77,12 @@ async function uploadToS3(presignedUrl, file) {
 }
 
 export async function uploadAvatar(token, file) {
-  const { presigned_url, public_url } = await getPresignedUrl(token, 'avatar', file.name, file.type)
+  const { presigned_url, key } = await getPresignedUrl(token, 'avatar', file.name, file.type)
   await uploadToS3(presigned_url, file)
   const res = await fetch(`${BASE}/auth/me/`, {
     method: 'PATCH',
     headers: authHeaders(token),
-    body: JSON.stringify({ avatar: public_url }),
+    body: JSON.stringify({ avatar: key }),
   })
   const json = await res.json()
   if (!res.ok) throw new Error('Error al guardar la foto de perfil.')
@@ -90,12 +90,12 @@ export async function uploadAvatar(token, file) {
 }
 
 export async function uploadDocument(token, file) {
-  const { presigned_url, public_url } = await getPresignedUrl(token, 'document', file.name, file.type)
+  const { presigned_url, key } = await getPresignedUrl(token, 'document', file.name, file.type)
   await uploadToS3(presigned_url, file)
   const res = await fetch(`${BASE}/auth/me/`, {
     method: 'PATCH',
     headers: authHeaders(token),
-    body: JSON.stringify({ document_upload: public_url }),
+    body: JSON.stringify({ document_upload: key }),
   })
   const json = await res.json()
   if (!res.ok) throw new Error('Error al guardar el documento.')
