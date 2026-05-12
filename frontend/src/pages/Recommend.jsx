@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { submitRecommendation } from '../api'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { fetchPsychologists } from '../api'
 
 const MOTIVOS = ['Ansiedad', 'Depresión', 'Relaciones', 'Trabajo / Estrés', 'Autoconocimiento', 'Duelo', 'Familia', 'Otro']
 const MODALITIES = [
@@ -7,6 +9,20 @@ const MODALITIES = [
   { value: 'presential', label: '🏠 Presencial', desc: 'En consultorio' },
   { value: 'any', label: '✨ Sin preferencia', desc: 'Me adapto' },
 ]
+
+const MOTIVO_SPECIALTY = {
+  'Ansiedad': 'Ansiedad',
+  'Depresión': 'Depresión',
+  'Relaciones': 'Pareja',
+  'Trabajo / Estrés': 'Estrés laboral',
+  'Autoconocimiento': 'Autoestima',
+  'Duelo': 'Trauma',
+  'Familia': 'Familia',
+  'Otro': null,
+}
+
+const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
+const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
 
 function Chip({ label, selected, onClick }) {
   return (
@@ -24,19 +40,85 @@ function Chip({ label, selected, onClick }) {
   )
 }
 
+function ResultCard({ psych, matchedSpecialties }) {
+  const p = psych.psychologist_profile || {}
+  const name = [psych.first_name, psych.last_name].filter(Boolean).join(' ') || psych.username
+  const specialties = p.specialties || []
+  const price = p.session_price ? `$${Number(p.session_price).toLocaleString()}` : null
+  const avatar = AVATARS[psych.id % AVATARS.length]
+  const hasMatch = specialties.some(s => matchedSpecialties.includes(s))
+
+  return (
+    <div className={`bg-card-bg rounded-2xl shadow-card overflow-hidden flex flex-col ${hasMatch ? 'ring-2 ring-sage-dark/40' : ''}`}>
+      <div className="h-44 bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-5xl relative">
+        {psych.avatar
+          ? <img src={psych.avatar} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+          : <span>{avatar}</span>
+        }
+        {hasMatch && (
+          <div className="absolute top-2 left-2 bg-sage-dark text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">✦ Recomendado</div>
+        )}
+        {p.is_accepting_patients && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs text-sage-dark flex items-center gap-1">
+            <span className="text-green-500 text-[0.5rem]">●</span> Disponible
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 flex flex-col flex-1 gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-serif text-base font-bold leading-tight">{name}</h3>
+          {price && <span className="text-sm font-semibold text-sage-dark flex-shrink-0">{price}</span>}
+        </div>
+
+        <div className="text-xs text-sage-dark font-medium">
+          {[MODALITY_LABEL[p.modality], p.city].filter(Boolean).join(' · ')}
+        </div>
+
+        {specialties.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {specialties.slice(0, 3).map(s => (
+              <span
+                key={s}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  matchedSpecialties.includes(s)
+                    ? 'bg-sage-dark text-white'
+                    : 'bg-sage/[0.12] text-sage-dark'
+                }`}
+              >{s}</span>
+            ))}
+            {specialties.length > 3 && (
+              <span className="px-2 py-0.5 rounded-full bg-warm-dark/[0.06] text-xs text-warm-mid">+{specialties.length - 3}</span>
+            )}
+          </div>
+        )}
+
+        {psych.bio && (
+          <p className="text-xs text-warm-mid leading-relaxed line-clamp-2 flex-1">{psych.bio}</p>
+        )}
+
+        <Link
+          to={`/psicologos/${psych.id}`}
+          className="mt-auto w-full py-2 rounded-xl text-sm font-medium text-center bg-warm-dark text-cream hover:bg-sage-dark transition-all"
+        >
+          Ver perfil completo →
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 const inputCls = 'px-4 py-3 rounded-xl border-[1.5px] border-warm-dark/15 bg-white text-sm text-warm-dark outline-none focus:border-sage-dark transition-colors w-full'
 
 export default function Recommend() {
+  const { token } = useAuth()
   const [motivos, setMotivos] = useState([])
   const [modality, setModality] = useState('')
   const [maxBudget, setMaxBudget] = useState(20000)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
+  const [results, setResults] = useState(null)
 
   function toggleMotivo(m) {
     setMotivos(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
@@ -46,33 +128,77 @@ export default function Recommend() {
     e.preventDefault()
     setError('')
     if (motivos.length === 0) { setError('Seleccioná al menos un motivo.'); return }
-    if (!name || !email) { setError('Nombre y email son obligatorios.'); return }
 
     setLoading(true)
     try {
-      await submitRecommendation({ motivos, modality, max_budget: maxBudget < 20000 ? maxBudget : null, name, email, phone, notes })
-      setSent(true)
+      const filters = {}
+      if (modality && modality !== 'any') filters.modality = modality
+      if (maxBudget < 20000) filters.maxPrice = maxBudget
+
+      const psychs = await fetchPsychologists(token, filters)
+
+      const matchedSpecialties = motivos.map(m => MOTIVO_SPECIALTY[m]).filter(Boolean)
+
+      const sorted = [...psychs].sort((a, b) => {
+        const aSpecs = a.psychologist_profile?.specialties || []
+        const bSpecs = b.psychologist_profile?.specialties || []
+        const aMatch = aSpecs.some(s => matchedSpecialties.includes(s))
+        const bMatch = bSpecs.some(s => matchedSpecialties.includes(s))
+        if (aMatch && !bMatch) return -1
+        if (!aMatch && bMatch) return 1
+        const aAccepting = a.psychologist_profile?.is_accepting_patients ? 1 : 0
+        const bAccepting = b.psychologist_profile?.is_accepting_patients ? 1 : 0
+        return bAccepting - aAccepting
+      })
+
+      setResults({ psychs: sorted, matchedSpecialties })
     } catch {
-      // endpoint not yet built — show success anyway for MVP
-      setSent(true)
+      setError('Error al buscar psicólogos. Intentá de nuevo.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (sent) {
+  if (results) {
     return (
-      <div className="max-w-xl mx-auto px-6 py-24 text-center">
-        <div className="text-6xl mb-6">🌿</div>
-        <h2 className="font-serif text-4xl font-bold mb-4">¡Recibimos tu solicitud!</h2>
-        <p className="text-warm-mid leading-relaxed text-base mb-8">
-          En menos de <strong className="text-warm-dark">24 horas</strong> te vamos a escribir a{' '}
-          <strong className="text-warm-dark">{email}</strong> con la recomendación personalizada del
-          psicólogo/a ideal para vos.
-        </p>
-        <div className="inline-flex items-center gap-2 bg-sage/15 border border-sage/40 px-4 py-2 rounded-full text-sm text-sage-dark">
-          ✦ Solo profesionales verificados
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <div className="flex items-start sm:items-center justify-between gap-4 mb-8 flex-col sm:flex-row">
+          <div>
+            <h2 className="font-serif text-3xl font-bold text-warm-dark">Tus psicólogos recomendados</h2>
+            <p className="text-warm-mid mt-1">
+              {results.psychs.length > 0
+                ? `Encontramos ${results.psychs.length} profesional${results.psychs.length !== 1 ? 'es' : ''} para vos.`
+                : 'No encontramos coincidencias con esos criterios.'
+              }
+            </p>
+          </div>
+          <button
+            onClick={() => setResults(null)}
+            className="px-4 py-2 rounded-full border-[1.5px] border-warm-dark/20 text-sm text-warm-mid hover:border-warm-dark hover:text-warm-dark transition-all whitespace-nowrap"
+          >
+            ← Nueva búsqueda
+          </button>
         </div>
+
+        {results.psychs.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-4">🌿</div>
+            <p className="text-warm-mid">
+              Probá con otros criterios o explorá todos los perfiles en{' '}
+              <Link to="/discover" className="text-sage-dark underline">Descubrir</Link>.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {results.psychs.map(psych => (
+              <ResultCard
+                key={psych.id}
+                psych={psych}
+                matchedSpecialties={results.matchedSpecialties}
+              />
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -84,7 +210,7 @@ export default function Recommend() {
       </div>
       <h2 className="font-serif text-4xl font-bold mb-3">Te encontramos el psicólogo ideal</h2>
       <p className="text-warm-mid leading-relaxed mb-10">
-        Respondé algunas preguntas y en menos de 24 horas te recomendamos el profesional más adecuado para vos.
+        Respondé algunas preguntas y te mostramos los profesionales más adecuados para vos.
         Sin costo, sin compromiso.
       </p>
 
@@ -155,25 +281,6 @@ export default function Recommend() {
           />
         </div>
 
-        {/* Contacto */}
-        <div>
-          <h3 className="font-medium text-warm-dark mb-3">¿A dónde te enviamos la recomendación?</h3>
-          <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Nombre</label>
-              <input className={inputCls} placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">Email</label>
-              <input type="email" className={inputCls} placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5 col-span-2 max-sm:col-span-1">
-              <label className="text-[0.7rem] font-medium text-warm-mid uppercase tracking-wider">WhatsApp <span className="normal-case font-normal text-warm-mid">(opcional)</span></label>
-              <input className={inputCls} placeholder="Ej: 11 1234 5678" value={phone} onChange={e => setPhone(e.target.value)} />
-            </div>
-          </div>
-        </div>
-
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-xs text-red-600">
             {error}
@@ -185,11 +292,11 @@ export default function Recommend() {
           disabled={loading}
           className="w-full py-4 rounded-xl bg-warm-dark text-cream text-base font-medium hover:bg-sage-dark hover:-translate-y-px transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {loading ? 'Enviando...' : 'Quiero mi recomendación →'}
+          {loading ? 'Buscando...' : 'Encontrar mi psicólogo →'}
         </button>
 
         <p className="text-center text-xs text-warm-mid -mt-4">
-          Te respondemos en menos de 24 horas. Solo trabajamos con profesionales verificados.
+          Solo trabajamos con profesionales verificados.
         </p>
       </form>
     </div>

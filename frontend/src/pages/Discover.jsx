@@ -1,20 +1,96 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import FilterSidebar from '../components/FilterSidebar'
-import SwipeStack from '../components/SwipeStack'
-import FavoritesPanel from '../components/MatchesPanel'
 import PsychDetailModal from '../components/PsychDetailModal'
-import { fetchPsychologists, fetchFavorites } from '../api'
+import { fetchPsychologists, swipeAction } from '../api'
+
+const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
+const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online + Presencial' }
+
+function PsychCard({ psych, onLike, onInfo, liking }) {
+  const p = psych.psychologist_profile || {}
+  const name = [psych.first_name, psych.last_name].filter(Boolean).join(' ') || psych.username
+  const specialties = p.specialties || []
+  const price = p.session_price ? `$${Number(p.session_price).toLocaleString()}` : null
+  const avatar = AVATARS[psych.id % AVATARS.length]
+  const liked = psych.swipe_status === 'like'
+
+  return (
+    <div className="bg-card-bg rounded-2xl shadow-card overflow-hidden flex flex-col">
+      <div
+        className="h-44 sm:h-52 bg-gradient-to-br from-[#C8D8C9] to-[#D8C8BE] flex items-center justify-center text-5xl cursor-pointer relative"
+        onClick={() => onInfo(psych)}
+      >
+        {psych.avatar
+          ? <img src={psych.avatar} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+          : <span>{avatar}</span>
+        }
+        {liked && (
+          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">♥ Elegido</div>
+        )}
+        {p.is_accepting_patients && (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs text-sage-dark flex items-center gap-1">
+            <span className="text-green-500 text-[0.5rem]">●</span> Disponible
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 flex flex-col flex-1 gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <h3
+            className="font-serif text-base font-bold leading-tight cursor-pointer hover:text-sage-dark transition-colors"
+            onClick={() => onInfo(psych)}
+          >
+            {name}
+          </h3>
+          {price && <span className="text-sm font-semibold text-sage-dark flex-shrink-0">{price}</span>}
+        </div>
+
+        <div className="text-xs text-sage-dark font-medium">
+          {[MODALITY_LABEL[p.modality], p.city].filter(Boolean).join(' · ')}
+        </div>
+
+        {specialties.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {specialties.slice(0, 3).map(s => (
+              <span key={s} className="px-2 py-0.5 rounded-full bg-sage/[0.12] text-xs text-sage-dark font-medium">{s}</span>
+            ))}
+            {specialties.length > 3 && (
+              <span className="px-2 py-0.5 rounded-full bg-warm-dark/[0.06] text-xs text-warm-mid">+{specialties.length - 3}</span>
+            )}
+          </div>
+        )}
+
+        {psych.bio && (
+          <p className="text-xs text-warm-mid leading-relaxed line-clamp-2 flex-1">{psych.bio}</p>
+        )}
+
+        <button
+          onClick={onLike}
+          disabled={liking}
+          className={`mt-auto w-full py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
+            liked
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-warm-dark text-cream hover:bg-sage-dark'
+          }`}
+        >
+          {liked ? '♥ Elegido' : '♡ Me interesa'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function Discover() {
-  const { token } = useAuth()
+  const { token, openLoginModal } = useAuth()
+  const { showToast } = useToast()
   const [psychs, setPsychs] = useState([])
-  const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedPsych, setSelectedPsych] = useState(null)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
-  const swipeDoRef = useRef(null)
+  const [liking, setLiking] = useState({})
 
   const load = useCallback(async (filters = {}) => {
     setLoading(true); setError('')
@@ -27,17 +103,21 @@ export default function Discover() {
     }
   }, [token])
 
-  const loadFavorites = useCallback(async () => {
-    if (!token) return
-    setFavorites(await fetchFavorites(token))
-  }, [token])
+  useEffect(() => { load() }, [load])
 
-  useEffect(() => { load(); loadFavorites() }, [load, loadFavorites])
-
-  const handleSwipeUpdate = useCallback((psychId, action) => {
-    setPsychs(prev => prev.map(p => p.id === psychId ? { ...p, swipe_status: action } : p))
-    if (action === 'like') loadFavorites()
-  }, [loadFavorites])
+  const handleLike = useCallback(async (psych) => {
+    if (!token) { openLoginModal(); return }
+    const liked = psych.swipe_status === 'like'
+    const newAction = liked ? 'pass' : 'like'
+    setLiking(prev => ({ ...prev, [psych.id]: true }))
+    try {
+      await swipeAction(token, psych.id, newAction)
+      setPsychs(prev => prev.map(p => p.id === psych.id ? { ...p, swipe_status: newAction } : p))
+      if (newAction === 'like') showToast('💚 ¡Agregado a tus favoritos!')
+      else showToast('Eliminado de favoritos.')
+    } catch {}
+    setLiking(prev => ({ ...prev, [psych.id]: false }))
+  }, [token, openLoginModal, showToast])
 
   const handleApplyFilters = (filters) => {
     load(filters)
@@ -68,54 +148,55 @@ export default function Discover() {
         </div>
       )}
 
-      <div className="grid min-h-[calc(100vh-65px)] grid-cols-1 lg:grid-cols-[280px_1fr_280px]">
-
+      <div className="flex min-h-[calc(100vh-65px)]">
         {/* Left sidebar — desktop only */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block w-[260px] flex-shrink-0">
           <FilterSidebar onApply={load} />
         </div>
 
-        {/* Center — stack */}
-        <div className="flex flex-col items-center justify-start lg:justify-center gap-2 py-6 sm:py-10 px-3 sm:px-5">
-
-          {/* Mobile top bar */}
-          <div className="flex lg:hidden items-center justify-between w-full max-w-[360px] mb-2">
-            <span className="text-xs text-warm-mid">
-              🧭{' '}
-              {loading ? 'Cargando...' : error ? 'Error' : `${psychs.length} psicólogos`}
-            </span>
+        {/* Main grid */}
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="font-serif text-2xl font-bold text-warm-dark">
+              {loading ? 'Cargando...' : error ? 'Error' : `${psychs.length} psicólogo${psychs.length !== 1 ? 's' : ''}`}
+            </h1>
             <button
               onClick={() => setShowMobileFilters(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-warm-dark/20 text-xs text-warm-dark hover:bg-warm-dark/[0.05] transition-all"
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-warm-dark/20 text-xs text-warm-dark hover:bg-warm-dark/[0.05] transition-all"
             >
               ⚙ Filtros
             </button>
           </div>
 
           {loading ? (
-            <div className="w-full max-w-[360px] h-[460px] sm:h-[520px] flex flex-col items-center justify-center gap-3 text-warm-mid">
-              <div className="text-5xl">⏳</div>
+            <div className="flex items-center justify-center py-24 gap-3 text-warm-mid">
+              <div className="text-4xl">⏳</div>
               <div>Cargando...</div>
             </div>
           ) : error ? (
-            <div className="w-full max-w-[360px] h-[460px] sm:h-[520px] flex flex-col items-center justify-center gap-3 text-warm-mid text-center px-6">
-              <div className="text-5xl">⚠️</div>
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-warm-mid text-center">
+              <div className="text-4xl">⚠️</div>
               <div>{error}</div>
             </div>
+          ) : psychs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-warm-mid text-center">
+              <div className="text-4xl">🌿</div>
+              <div className="font-medium">No hay psicólogos disponibles.</div>
+              <div className="text-sm">Probá ajustar los filtros.</div>
+            </div>
           ) : (
-            <SwipeStack
-              psychs={psychs}
-              onSwipeUpdate={handleSwipeUpdate}
-              onFavoriteFound={loadFavorites}
-              onInfo={psych => setSelectedPsych(psych)}
-              swipeRef={fn => { swipeDoRef.current = fn }}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+              {psychs.map(psych => (
+                <PsychCard
+                  key={psych.id}
+                  psych={psych}
+                  onLike={() => handleLike(psych)}
+                  onInfo={setSelectedPsych}
+                  liking={!!liking[psych.id]}
+                />
+              ))}
+            </div>
           )}
-        </div>
-
-        {/* Right sidebar — desktop only */}
-        <div className="hidden lg:block">
-          <FavoritesPanel favorites={favorites} />
         </div>
       </div>
 
@@ -123,7 +204,7 @@ export default function Discover() {
         psych={selectedPsych}
         index={psychs.findIndex(p => p.id === selectedPsych?.id)}
         onClose={() => setSelectedPsych(null)}
-        onSwipe={dir => swipeDoRef.current?.(dir)}
+        onSwipe={() => {}}
       />
     </>
   )
