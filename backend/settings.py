@@ -17,6 +17,10 @@ RAILWAY_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default=None)
 if RAILWAY_DOMAIN:
     ALLOWED_HOSTS.append(RAILWAY_DOMAIN)
 
+# Trust Railway's HTTPS proxy so Django builds https:// absolute URLs
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
