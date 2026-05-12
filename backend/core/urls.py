@@ -9,6 +9,9 @@ urlpatterns = [
     path('auth/me/', views.me),
     path('auth/token/refresh/', TokenRefreshView.as_view()),
 
+    # Upload
+    path('upload/presigned/', views.presigned_upload),
+
     # Public
     path('psychologists/', views.psychologists_list),
     path('psychologists/<int:pk>/', views.psychologist_detail),

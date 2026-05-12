@@ -31,7 +31,8 @@
       "Bash(python -c \"import ast, sys; ast.parse\\(open\\('core/views.py'\\).read\\(\\)\\); ast.parse\\(open\\('core/serializers.py'\\).read\\(\\)\\); ast.parse\\(open\\('core/urls.py'\\).read\\(\\)\\); print\\('All files parse OK'\\)\")",
       "Bash(node -e ' *)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('backend/core/views.py'\\).read\\(\\)\\); print\\('views.py OK'\\)\")",
-      "Bash(node -e \"require\\('fs'\\).readFileSync\\('frontend/src/pages/Calendar.jsx'\\); console.log\\('Calendar.jsx OK'\\)\")"
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('frontend/src/pages/Calendar.jsx'\\); console.log\\('Calendar.jsx OK'\\)\")",
+      "Bash(dir)"
     ]
   }
 }

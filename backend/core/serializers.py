@@ -22,9 +22,13 @@ class PsychologistProfileSerializer(serializers.ModelSerializer):
 
 class AdminPsychologistProfileSerializer(serializers.ModelSerializer):
     is_verified = serializers.SerializerMethodField()
+    document_upload = serializers.SerializerMethodField()
 
     def get_is_verified(self, obj):
         return obj.verification_status == PsychologistProfile.STATUS_APPROVED
+
+    def get_document_upload(self, obj):
+        return _resolve_file_url(obj.document_upload, self.context.get('request'))
 
     class Meta:
         model = PsychologistProfile
@@ -37,8 +41,23 @@ class AdminPsychologistProfileSerializer(serializers.ModelSerializer):
         ]
 
 
+def _resolve_file_url(value, request):
+    """Return value as-is if it's already a full URL, otherwise build a local media URL."""
+    if not value:
+        return None
+    if str(value).startswith('http'):
+        return str(value)
+    if request:
+        return request.build_absolute_uri(f'/media/{value}')
+    return f'/media/{value}'
+
+
 class UserSerializer(serializers.ModelSerializer):
     psychologist_profile = PsychologistProfileSerializer(read_only=True)
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        return _resolve_file_url(obj.avatar, self.context.get('request'))
 
     class Meta:
         model = User
@@ -50,6 +69,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 class AdminUserSerializer(serializers.ModelSerializer):
     psychologist_profile = AdminPsychologistProfileSerializer(read_only=True)
+    avatar = serializers.SerializerMethodField()
+
+    def get_avatar(self, obj):
+        return _resolve_file_url(obj.avatar, self.context.get('request'))
 
     class Meta:
         model = User

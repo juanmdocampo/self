@@ -13,7 +13,7 @@ class User(AbstractUser):
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_PATIENT)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.CharField(max_length=500, blank=True, null=True, default='')
     bio = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
     sought_specialties = models.JSONField(default=list)
@@ -52,7 +52,7 @@ class PsychologistProfile(models.Model):
     city = models.CharField(max_length=100, blank=True)
     verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     rejection_reason = models.TextField(blank=True, default='')
-    document_upload = models.FileField(upload_to='documents/', blank=True, null=True)
+    document_upload = models.CharField(max_length=500, blank=True, null=True, default='')
     is_accepting_patients = models.BooleanField(default=True)
     slot_duration = models.PositiveIntegerField(default=60, help_text='Duración de cada sesión en minutos')
     slot_gap = models.PositiveIntegerField(default=0, help_text='Pausa entre sesiones en minutos')

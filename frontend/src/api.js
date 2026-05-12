@@ -56,29 +56,49 @@ export async function updateProfile(token, data) {
   return json
 }
 
+async function getPresignedUrl(token, uploadType, filename, contentType) {
+  const res = await fetch(`${BASE}/upload/presigned/`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ upload_type: uploadType, filename, content_type: contentType }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Error al obtener URL de subida.')
+  return data // { presigned_url, key, public_url }
+}
+
+async function uploadToS3(presignedUrl, file) {
+  const res = await fetch(presignedUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  if (!res.ok) throw new Error('Error al subir el archivo al bucket.')
+}
+
 export async function uploadAvatar(token, file) {
-  const fd = new FormData()
-  fd.append('avatar', file)
+  const { presigned_url, public_url } = await getPresignedUrl(token, 'avatar', file.name, file.type)
+  await uploadToS3(presigned_url, file)
   const res = await fetch(`${BASE}/auth/me/`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
+    headers: authHeaders(token),
+    body: JSON.stringify({ avatar: public_url }),
   })
   const json = await res.json()
-  if (!res.ok) throw new Error('Error al subir foto.')
+  if (!res.ok) throw new Error('Error al guardar la foto de perfil.')
   return json
 }
 
 export async function uploadDocument(token, file) {
-  const fd = new FormData()
-  fd.append('document_upload', file)
+  const { presigned_url, public_url } = await getPresignedUrl(token, 'document', file.name, file.type)
+  await uploadToS3(presigned_url, file)
   const res = await fetch(`${BASE}/auth/me/`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
+    headers: authHeaders(token),
+    body: JSON.stringify({ document_upload: public_url }),
   })
   const json = await res.json()
-  if (!res.ok) throw new Error('Error al subir documento.')
+  if (!res.ok) throw new Error('Error al guardar el documento.')
   return json
 }
 

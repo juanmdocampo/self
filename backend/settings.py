@@ -129,8 +129,20 @@ if FRONTEND_DIST.exists():
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Cloudinary — used in production when CLOUDINARY_URL is set
-CLOUDINARY_URL = config('CLOUDINARY_URL', default=None)
-if CLOUDINARY_URL:
-    INSTALLED_APPS += ['cloudinary_storage', 'cloudinary']
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Railway Object Storage (S3-compatible) — activo cuando S3_ACCESS_KEY está definido
+S3_ACCESS_KEY = config('S3_ACCESS_KEY', default=None)
+if S3_ACCESS_KEY:
+    INSTALLED_APPS += ['storages']
+    STORAGES = {
+        'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
+        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    }
+    AWS_ACCESS_KEY_ID = S3_ACCESS_KEY
+    AWS_SECRET_ACCESS_KEY = config('S3_SECRET_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('S3_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = config('S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = config('S3_REGION', default='auto')
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_QUERYSTRING_AUTH = False
+    MEDIA_URL = f"{config('S3_ENDPOINT_URL')}/{config('S3_BUCKET_NAME')}/"

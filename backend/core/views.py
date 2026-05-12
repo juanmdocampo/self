@@ -1,4 +1,5 @@
 import uuid
+import boto3
 from datetime import date, datetime, timedelta
 
 from rest_framework import status
@@ -51,21 +52,72 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def me(request):
     if request.method == 'GET':
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={'request': request}).data)
 
     user = request.user
+
+    # Avatar: presigned URL confirmation (JSON string) or legacy multipart
     if 'avatar' in request.FILES:
         user.avatar = request.FILES['avatar']
         user.save()
+    elif isinstance(request.data.get('avatar'), str) and request.data['avatar']:
+        user.avatar = request.data['avatar']
+        user.save()
 
+    # Document: presigned URL confirmation (JSON string) or legacy multipart
     if 'document_upload' in request.FILES and hasattr(user, 'psychologist_profile'):
         user.psychologist_profile.document_upload = request.FILES['document_upload']
         user.psychologist_profile.save()
+    elif isinstance(request.data.get('document_upload'), str) and request.data['document_upload']:
+        if hasattr(user, 'psychologist_profile'):
+            user.psychologist_profile.document_upload = request.data['document_upload']
+            user.psychologist_profile.save()
 
     serializer = UpdateProfileSerializer(user, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response(UserSerializer(user).data)
+    return Response(UserSerializer(user, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def presigned_upload(request):
+    upload_type = request.data.get('upload_type')
+    filename = request.data.get('filename', 'file')
+    content_type = request.data.get('content_type', 'application/octet-stream')
+
+    if upload_type not in ('avatar', 'document'):
+        return Response({'error': 'upload_type debe ser avatar o document.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.conf import settings as django_settings
+    if not getattr(django_settings, 'AWS_ACCESS_KEY_ID', None):
+        return Response({'error': 'Almacenamiento en la nube no configurado.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    folder = 'avatars' if upload_type == 'avatar' else 'documents'
+    key = f"{folder}/{uuid.uuid4()}.{ext}" if ext else f"{folder}/{uuid.uuid4()}"
+
+    s3 = boto3.client(
+        's3',
+        endpoint_url=django_settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=django_settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=django_settings.AWS_SECRET_ACCESS_KEY,
+        region_name=django_settings.AWS_S3_REGION_NAME,
+    )
+
+    presigned_url = s3.generate_presigned_url(
+        'put_object',
+        Params={
+            'Bucket': django_settings.AWS_STORAGE_BUCKET_NAME,
+            'Key': key,
+            'ContentType': content_type,
+        },
+        ExpiresIn=300,
+    )
+
+    public_url = f"{django_settings.AWS_S3_ENDPOINT_URL}/{django_settings.AWS_STORAGE_BUCKET_NAME}/{key}"
+
+    return Response({'presigned_url': presigned_url, 'key': key, 'public_url': public_url})
 
 
 @api_view(['GET'])
