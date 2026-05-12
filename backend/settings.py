@@ -132,25 +132,24 @@ if FRONTEND_DIST.exists():
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Railway Object Storage — activo cuando AWS_ACCESS_KEY_ID está definido
-# Variable names match Railway's "Django (django-storages)" connection style
+# Railway Object Storage — variable names match Railway's "Django (django-storages)" style
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default=None)
-if AWS_ACCESS_KEY_ID:
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default=None)
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default=None)
+AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL', default=None)
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='auto')
+
+if all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_ENDPOINT_URL]):
     INSTALLED_APPS += ['storages']
     STORAGES = {
         'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
         'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
     }
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False
+    MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 else:
     STORAGES = {
         'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
         'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
     }
-    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
-    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='auto')
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_QUERYSTRING_AUTH = False
-    MEDIA_URL = f"{config('AWS_S3_ENDPOINT_URL')}/{config('AWS_STORAGE_BUCKET_NAME')}/"
