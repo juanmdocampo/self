@@ -173,6 +173,32 @@ export default function PsychProfile() {
             <span className="text-green-500 text-[0.5rem]">●</span> Disponible
           </div>
         )}
+
+        {/* Action icons */}
+        <div className="absolute bottom-4 right-4 flex gap-2">
+          {(!currentUser || currentUser.role === 'patient') && (
+            <button
+              onClick={handleChat}
+              disabled={chatLoading}
+              className="w-11 h-11 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center text-sage-dark hover:bg-white transition-all disabled:opacity-60 text-lg"
+              title="Enviar mensaje"
+            >
+              💬
+            </button>
+          )}
+          <button
+            onClick={handleLike}
+            disabled={likeLoading}
+            className={`w-11 h-11 rounded-full shadow-md flex items-center justify-center transition-all disabled:opacity-60 text-lg ${
+              liked
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-white/90 backdrop-blur-sm text-warm-dark hover:bg-white'
+            }`}
+            title={liked ? 'En tus favoritos' : 'Me interesa'}
+          >
+            {liked ? '♥' : '♡'}
+          </button>
+        </div>
       </div>
 
       {/* Name + modality */}
@@ -319,29 +345,6 @@ export default function PsychProfile() {
         </div>
       )}
 
-      {/* CTAs */}
-      <div className="flex gap-3">
-        {(!currentUser || currentUser.role === 'patient') && (
-          <button
-            onClick={handleChat}
-            disabled={chatLoading}
-            className="flex-1 py-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 bg-sage-dark text-white hover:opacity-90"
-          >
-            {chatLoading ? 'Abriendo...' : '💬 Enviar mensaje'}
-          </button>
-        )}
-        <button
-          onClick={handleLike}
-          disabled={likeLoading}
-          className={`flex-1 py-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
-            liked
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-warm-dark text-cream hover:bg-sage-dark'
-          }`}
-        >
-          {liked ? '♥ En tus favoritos' : '♡ Me interesa'}
-        </button>
-      </div>
     </div>
   )
 }
