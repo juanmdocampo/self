@@ -51,12 +51,13 @@ class PsychologistProfileAdmin(admin.ModelAdmin):
 
     @admin.display(description='Documento')
     def document_link(self, obj):
-        if obj.document_upload:
-            return format_html(
-                '<a href="{}" target="_blank" rel="noopener">Ver documento ↗</a>',
-                obj.document_upload.url,
-            )
-        return '—'
+        if not obj.document_upload:
+            return '—'
+        from .serializers import _resolve_file_url
+        url = _resolve_file_url(obj.document_upload, None)
+        if not url:
+            return '—'
+        return format_html('<a href="{}" target="_blank" rel="noopener">Ver documento ↗</a>', url)
 
 
 @admin.register(SwipeAction)
