@@ -7,7 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import esLocale from '@fullcalendar/core/locales/es'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { fetchPsychologist, swipeAction, fetchPsychologistPublicEvents, bookAppointment, bookRecurringAppointment } from '../api'
+import { fetchPsychologist, swipeAction, fetchPsychologistPublicEvents, bookAppointment, bookRecurringAppointment, getOrCreateConversation } from '../api'
 
 const AVATARS = ['👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍💼', '🧑‍💼']
 const MODALITY_LABEL = { online: 'Online', presential: 'Presencial', both: 'Online y Presencial' }
@@ -25,6 +25,7 @@ export default function PsychProfile() {
   const [bookModal, setBookModal] = useState(null)  // { event }
   const [bookingSlot, setBookingSlot] = useState(false)
   const [recurringWeeks, setRecurringWeeks] = useState(0)
+  const [chatLoading, setChatLoading] = useState(false)
   // -1 = indefinite recurring booking
 
 
@@ -96,6 +97,20 @@ export default function PsychProfile() {
       showToast(err.message)
     } finally {
       setBookingSlot(false)
+    }
+  }
+
+  async function handleChat() {
+    if (!token) { openLoginModal(); return }
+    if (chatLoading) return
+    setChatLoading(true)
+    try {
+      const conv = await getOrCreateConversation(token, psych.id)
+      navigate(`/chat?c=${conv.id}`)
+    } catch {
+      showToast('Error al abrir el chat. Intentá de nuevo.')
+    } finally {
+      setChatLoading(false)
     }
   }
 
@@ -304,18 +319,29 @@ export default function PsychProfile() {
         </div>
       )}
 
-      {/* CTA */}
-      <button
-        onClick={handleLike}
-        disabled={likeLoading}
-        className={`w-full py-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
-          liked
-            ? 'bg-green-500 text-white hover:bg-green-600'
-            : 'bg-warm-dark text-cream hover:bg-sage-dark'
-        }`}
-      >
-        {liked ? '♥ En tus favoritos' : '♡ Me interesa este profesional'}
-      </button>
+      {/* CTAs */}
+      <div className="flex gap-3">
+        {(!currentUser || currentUser.role === 'patient') && (
+          <button
+            onClick={handleChat}
+            disabled={chatLoading}
+            className="flex-1 py-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 bg-sage-dark text-white hover:opacity-90"
+          >
+            {chatLoading ? 'Abriendo...' : '💬 Enviar mensaje'}
+          </button>
+        )}
+        <button
+          onClick={handleLike}
+          disabled={likeLoading}
+          className={`flex-1 py-4 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
+            liked
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-warm-dark text-cream hover:bg-sage-dark'
+          }`}
+        >
+          {liked ? '♥ En tus favoritos' : '♡ Me interesa'}
+        </button>
+      </div>
     </div>
   )
 }
