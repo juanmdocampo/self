@@ -89,8 +89,8 @@ def presigned_upload(request):
     if upload_type not in ('avatar', 'document'):
         return Response({'error': 'upload_type debe ser avatar o document.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    from django.conf import settings as django_settings
-    if not getattr(django_settings, 'AWS_ACCESS_KEY_ID', None):
+    from django.conf import settings as cfg
+    if not getattr(cfg, 'AWS_ACCESS_KEY_ID', None):
         return Response({'error': 'Almacenamiento en la nube no configurado.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
@@ -99,23 +99,23 @@ def presigned_upload(request):
 
     s3 = boto3.client(
         's3',
-        endpoint_url=django_settings.AWS_S3_ENDPOINT_URL,
-        aws_access_key_id=django_settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=django_settings.AWS_SECRET_ACCESS_KEY,
-        region_name=django_settings.AWS_S3_REGION_NAME,
+        endpoint_url=cfg.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=cfg.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=cfg.AWS_SECRET_ACCESS_KEY,
+        region_name=cfg.AWS_S3_REGION_NAME,
     )
 
     presigned_url = s3.generate_presigned_url(
         'put_object',
         Params={
-            'Bucket': django_settings.AWS_STORAGE_BUCKET_NAME,
+            'Bucket': cfg.AWS_STORAGE_BUCKET_NAME,
             'Key': key,
             'ContentType': content_type,
         },
         ExpiresIn=300,
     )
 
-    public_url = f"{django_settings.AWS_S3_ENDPOINT_URL}/{django_settings.AWS_STORAGE_BUCKET_NAME}/{key}"
+    public_url = f"{cfg.AWS_S3_ENDPOINT_URL}/{cfg.AWS_STORAGE_BUCKET_NAME}/{key}"
 
     return Response({'presigned_url': presigned_url, 'key': key, 'public_url': public_url})
 

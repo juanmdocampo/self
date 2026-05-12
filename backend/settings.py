@@ -133,20 +133,20 @@ if FRONTEND_DIST.exists():
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Railway Object Storage (S3-compatible) — activo cuando S3_ACCESS_KEY está definido
-S3_ACCESS_KEY = config('S3_ACCESS_KEY', default=None)
-if S3_ACCESS_KEY:
+# Railway Object Storage — activo cuando AWS_ACCESS_KEY_ID está definido
+# Variable names match Railway's "Django (django-storages)" connection style
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default=None)
+if AWS_ACCESS_KEY_ID:
     INSTALLED_APPS += ['storages']
     STORAGES = {
         'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
         'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
     }
-    AWS_ACCESS_KEY_ID = S3_ACCESS_KEY
-    AWS_SECRET_ACCESS_KEY = config('S3_SECRET_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('S3_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = config('S3_ENDPOINT_URL')
-    AWS_S3_REGION_NAME = config('S3_REGION', default='auto')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='auto')
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = 'public-read'
     AWS_QUERYSTRING_AUTH = False
-    MEDIA_URL = f"{config('S3_ENDPOINT_URL')}/{config('S3_BUCKET_NAME')}/"
+    MEDIA_URL = f"{config('AWS_S3_ENDPOINT_URL')}/{config('AWS_STORAGE_BUCKET_NAME')}/"
