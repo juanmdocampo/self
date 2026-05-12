@@ -1,5 +1,4 @@
 import uuid
-import boto3
 from datetime import date, datetime, timedelta
 
 from rest_framework import status
@@ -89,6 +88,7 @@ def presigned_upload(request):
     if upload_type not in ('avatar', 'document'):
         return Response({'error': 'upload_type debe ser avatar o document.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    import boto3
     from django.conf import settings as cfg
     if not getattr(cfg, 'AWS_ACCESS_KEY_ID', None):
         return Response({'error': 'Almacenamiento en la nube no configurado.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
