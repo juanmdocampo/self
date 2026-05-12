@@ -24,6 +24,7 @@ export default function Nav() {
   const tabs = [
     { path: '/discover', label: 'Descubrir', show: true },
     { path: '/recommend', label: 'Me recomiendan', show: true },
+    { path: '/favorites', label: 'Mis favoritos', show: !!currentUser && currentUser.role === 'patient', authRequired: true },
     { path: '/chat', label: 'Mensajes', show: !!currentUser, authRequired: true },
     { path: '/calendar', label: 'Calendario', show: !!currentUser, authRequired: true },
     { path: '/register', label: 'Registrarse', show: !currentUser },
