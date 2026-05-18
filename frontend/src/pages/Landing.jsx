@@ -76,9 +76,9 @@ export default function Landing() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-14">
             {[
-              { num: '240+', label: 'Profesionales activos' },
-              { num: '1.2k', label: 'Conexiones realizadas' },
-              { num: '98%', label: 'Satisfacción' },
+              { num: '0', label: 'Profesionales activos' },
+              { num: '0', label: 'Conexiones realizadas' },
+              { num: '0', label: 'Satisfacción' },
             ].map(s => (
               <div key={s.label}>
                 <div className="font-serif text-4xl font-bold text-warm-dark">{s.num}</div>

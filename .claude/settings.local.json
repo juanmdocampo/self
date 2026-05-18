@@ -32,7 +32,22 @@
       "Bash(node -e ' *)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('backend/core/views.py'\\).read\\(\\)\\); print\\('views.py OK'\\)\")",
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('frontend/src/pages/Calendar.jsx'\\); console.log\\('Calendar.jsx OK'\\)\")",
-      "Bash(dir)"
+      "Bash(dir)",
+      "Bash(npm --version)",
+      "Bash(npx playwright *)",
+      "Bash(npm list *)",
+      "Bash(ls \"/c/Program Files/Google/Chrome/Application/chrome.exe\" 2>/dev/null && echo \"Chrome found\" || echo \"Chrome not found\")",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash(ls \"/c/Program Files \\(x86\\)/Google/Chrome/Application/chrome.exe\" 2>/dev/null && echo \"Chrome found x86\" || echo \"not found\")",
+      "Read(//c/Program Files \\(x86\\)/Google/Chrome/Application/**)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\juanmanuel.docampo\\\\Documents\\\\self\\\\screenshots-tool\")",
+      "Bash(node capture.js)",
+      "Bash(netstat -ano)",
+      "Bash(awk '{print $5}')",
+      "Bash(xargs -I {} sh -c 'taskkill /F /PID {} 2>/dev/null || true')"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\juanmanuel.docampo\\Documents\\self"
     ]
   }
 }

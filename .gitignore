@@ -26,3 +26,7 @@ frontend/dist/
 .vscode/
 .idea/
 *.swp
+
+#
+screenshots/
+screenshots-tool/
