@@ -51,10 +51,10 @@ export default function Landing() {
           </button>
           <div className="flex gap-3 w-full">
             <button
-              onClick={() => scrollTo('quienes-somos')}
+              onClick={() => navigate('/recommend')}
               className="flex-1 px-4 py-3 rounded-full border-[1.5px] border-warm-mid/40 text-warm-mid text-sm font-medium hover:border-warm-dark hover:text-warm-dark transition-all"
             >
-              Quiénes somos ↓
+              Me recomiendan →
             </button>
             <button
               onClick={() => scrollTo('como-funciona')}
@@ -69,10 +69,11 @@ export default function Landing() {
       {/* Quiénes somos */}
       <section id="quienes-somos" className="py-20 px-6 sm:px-10 lg:px-20 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-warm-dark">Quiénes somos</h2>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 text-warm-dark">¿Quiénes somos?</h2>
           <p className="text-warm-mid text-lg leading-relaxed max-w-2xl mx-auto">
-            Self es una plataforma que conecta personas con profesionales de salud mental de forma simple,
-            humana e intuitiva. Creemos que encontrar el psicólogo indicado debería ser fácil y accesible para todos.
+            Self es una plataforma diseñada para conectar personas con profesionales de salud mental y coaches
+            especializados, mediante una experiencia visual, intuitiva y centrada en el usuario. Nuestra misión
+            es hacer que el acceso al bienestar emocional sea más simple y accesible.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-14">
             {[
@@ -96,7 +97,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
             {[
               { step: '01', title: 'Contanos sobre vos', desc: 'Respondé algunas preguntas simples sobre lo que estás buscando y tus preferencias.' },
-              { step: '02', title: 'Explorá perfiles', desc: 'Descubrí psicólogos verificados que se adaptan a tus necesidades, de forma visual y simple.' },
+              { step: '02', title: 'Explorá perfiles', desc: 'Descubrí psicólogos y coaches especializados que se adaptan a tus necesidades, de forma visual y simple.' },
               { step: '03', title: 'Conectá', desc: 'Elegí el profesional que más te resuene y comenzá tu proceso con un clic.' },
             ].map(item => (
               <div key={item.step} className="flex flex-col gap-3">
@@ -105,14 +106,6 @@ export default function Landing() {
                 <p className="text-warm-mid text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
-          </div>
-          <div className="text-center mt-14">
-            <button
-              onClick={handleLogin}
-              className="px-10 py-4 rounded-full bg-warm-dark text-cream text-sm font-medium hover:bg-sage-dark hover:-translate-y-px transition-all"
-            >
-              Comenzar ahora →
-            </button>
           </div>
         </div>
       </section>
